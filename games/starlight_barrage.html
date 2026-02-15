@@ -264,7 +264,7 @@
         }
       }
 
-      function spawnSkirmisherWave(count = 6, yStart = 90) {
+      function spawnSkirmisherWave(count = 5, yStart = 90) {
         for (let i = 0; i < count; i++) {
           const fromLeft = i % 2 === 0;
           spawnEnemy({
@@ -291,20 +291,31 @@
 
       function spawnSniperPair() {
         for (let i = 0; i < 2; i++) {
+          const anchorX = 90 + i * 300;
+          const centerY = H * 0.46 + i * 18;
+          const retreatY = H - 130 + i * 22;
           spawnEnemy({
             type: 'sniper',
             sizeClass: 'medium',
-            x: 90 + i * 300,
+            x: anchorX,
             y: -50 - i * 35,
             hp: Math.floor(diffRate(20, 0.05)),
             value: 680,
             update(e) {
               e.t++;
-              if (e.t < 80) {
-                e.y += 1.15;
+              if (e.t < 120) {
+                e.y += (centerY - e.y) * 0.08;
+                e.x += (anchorX - e.x) * 0.06;
+              } else if (e.t < 260) {
+                e.y += Math.sin((e.t + i * 25) / 40) * 0.24;
+                e.x += Math.sin((e.t + i * 10) / 55) * 0.65;
+              } else if (e.t < 380) {
+                const retreatX = i === 0 ? W * 0.27 : W * 0.73;
+                e.y += (retreatY - e.y) * 0.05;
+                e.x += (retreatX - e.x) * 0.045;
               } else {
-                e.y += Math.sin((e.t + i * 25) / 40) * 0.22;
-                e.x += Math.sin((e.t + i * 10) / 55) * 0.55;
+                e.y += 1.05;
+                e.x += i === 0 ? -0.3 : 0.3;
               }
 
               if (e.t % scaledShotInterval(76) === 0) {
@@ -313,7 +324,7 @@
               if (e.t % scaledShotInterval(120) === 0) {
                 ringBullets(e.x, e.y + 12, scaledBulletCount(6), diffRate(0.9, 0.03), e.t * 0.03, '#6ec9ff');
               }
-              if (e.t > 360) e.alive = false;
+              if (e.t > 520) e.alive = false;
             },
             draw(e) {
               drawAscii([
@@ -327,7 +338,7 @@
       }
 
       function spawnDiverLine() {
-        for (let i = 0; i < 8; i++) {
+        for (let i = 0; i < 6; i++) {
           spawnEnemy({
             type: 'diver',
             x: 45 + i * 55,
@@ -386,7 +397,7 @@
       }
 
       function spawnWaveAFormationSweep() {
-        const columns = 5;
+        const columns = 4;
         for (let i = 0; i < columns * 2; i++) {
           const row = Math.floor(i / columns);
           const col = i % columns;
@@ -413,7 +424,7 @@
       }
 
       function spawnWaveAFormationDrop() {
-        for (let i = 0; i < 12; i++) {
+        for (let i = 0; i < 8; i++) {
           const row = Math.floor(i / 4);
           const col = i % 4;
           spawnEnemy({
@@ -439,9 +450,9 @@
       }
 
       function spawnWaveB() {
-        for (let i = 0; i < 10; i++) {
-          const fromLeft = i < 5;
-          const row = i % 5;
+        for (let i = 0; i < 12; i++) {
+          const fromLeft = i < 6;
+          const row = i % 6;
           spawnEnemy({
             type: 'formation',
             x: fromLeft ? -30 - row * 24 : W + 30 + row * 24,
@@ -464,11 +475,11 @@
       }
 
       function spawnWaveC() {
-        for (let i = 0; i < 10; i++) {
+        for (let i = 0; i < 12; i++) {
           spawnEnemy({
             type: 'formationAlt',
-            x: 30 + (i % 5) * 100,
-            y: -20 - Math.floor(i / 5) * 80,
+            x: 30 + (i % 6) * 82,
+            y: -20 - Math.floor(i / 6) * 95,
             hp: Math.floor(diffRate(4, 0.05)),
             value: 180,
             update(e) {
@@ -481,6 +492,53 @@
             },
             draw(e) {
               drawAscii(['{+}', '/v\\'], e.x, e.y, '#ffa0c7', 13);
+            }
+          });
+        }
+      }
+
+      function spawnWaveBMix() {
+        for (let i = 0; i < 6; i++) {
+          spawnEnemy({
+            type: 'midBMixSkirm',
+            x: i % 2 === 0 ? -24 : W + 24,
+            y: 85 + i * 42,
+            hp: Math.floor(diffRate(5, 0.05)),
+            value: 170,
+            update(e) {
+              e.t++;
+              const fromLeft = i % 2 === 0;
+              e.x += fromLeft ? 2.15 : -2.15;
+              e.y += Math.cos((e.t + i * 18) / 22) * 0.8;
+              if (e.t % scaledShotInterval(78) === 0) {
+                aimedShot(e.x, e.y, diffRate(1.55, 0.03), fromLeft ? 0.08 : -0.08);
+              }
+            },
+            draw(e) {
+              drawAscii(['<+>', ' | '], e.x, e.y, '#8ff2ff', 13);
+            }
+          });
+        }
+
+        for (let i = 0; i < 3; i++) {
+          const fromLeft = i % 2 === 0;
+          spawnEnemy({
+            type: 'midBMixGuard',
+            sizeClass: 'medium',
+            x: fromLeft ? -45 : W + 45,
+            y: 150 + i * 70,
+            hp: Math.floor(diffRate(16, 0.05)),
+            value: 420,
+            update(e) {
+              e.t++;
+              e.x += fromLeft ? 1.55 : -1.55;
+              e.y += Math.sin((e.t + i * 30) / 24) * 0.42;
+              if (e.t % scaledShotInterval(64) === 0) {
+                ringBullets(e.x, e.y, scaledBulletCount(5), diffRate(1.1, 0.03), e.t * 0.07, '#7db7ff');
+              }
+            },
+            draw(e) {
+              drawAscii(['[M]', '/|\\'], e.x, e.y, '#7fbeff', 15);
             }
           });
         }
@@ -756,11 +814,11 @@
         state.phaseFrame++;
 
         if (state.phase === PHASE_MID_A) {
-          if (state.phaseFrame === 20 || state.phaseFrame === 340) spawnWaveA();
-          if (state.phaseFrame === 180 || state.phaseFrame === 500) spawnWaveAAlt();
-          if (state.phaseFrame === 100 || state.phaseFrame === 420) spawnWaveAFormationSweep();
-          if (state.phaseFrame === 260 || state.phaseFrame === 580) spawnWaveAFormationDrop();
-          if (state.phaseFrame > 680 && state.midBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
+          if (state.phaseFrame === 40 || state.phaseFrame === 360) spawnWaveA();
+          if (state.phaseFrame === 220) spawnWaveAAlt();
+          if (state.phaseFrame === 130) spawnWaveAFormationSweep();
+          if (state.phaseFrame === 500) spawnWaveAFormationDrop();
+          if (state.phaseFrame > 620 && state.midBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
             state.midBossSpawnTimer = 75;
           }
           if (state.midBossSpawnTimer >= 0) {
@@ -775,9 +833,10 @@
             changePhase(PHASE_MID_B);
           }
         } else if (state.phase === PHASE_MID_B) {
-          if (state.phaseFrame === 20 || state.phaseFrame === 200) spawnWaveB();
-          if (state.phaseFrame === 380 || state.phaseFrame === 560) spawnWaveC();
-          if (state.phaseFrame > 880 && state.stageBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
+          if (state.phaseFrame === 20 || state.phaseFrame === 400) spawnWaveB();
+          if (state.phaseFrame === 140 || state.phaseFrame === 520) spawnWaveC();
+          if (state.phaseFrame === 270 || state.phaseFrame === 640) spawnWaveBMix();
+          if (state.phaseFrame > 960 && state.stageBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
             state.stageBossSpawnTimer = 90;
           }
           if (state.stageBossSpawnTimer >= 0) {
