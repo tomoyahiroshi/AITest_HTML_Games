@@ -10,8 +10,8 @@
     h1{margin:0 0 12px}
     .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
     button,select{padding:8px 10px}
-    .grid{display:grid;grid-template-columns:repeat(9,1fr);gap:0;border:2px solid #222}
-    .cell{width:100%;aspect-ratio:1;border:1px solid #ccc;text-align:center;font-size:20px}
+    .grid{display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);gap:0;border:2px solid #222;max-width:540px;width:100%;aspect-ratio:1}
+    .cell{width:100%;height:100%;box-sizing:border-box;margin:0;padding:0;border:1px solid #ccc;text-align:center;font-size:20px}
     .cell.given{background:#e9efff;font-weight:bold}
     .cell.err{background:#ffd9d9}
     .status{margin-top:10px;font-weight:bold}
@@ -79,7 +79,7 @@
         input.maxLength=1;
         input.addEventListener('input',()=>{
           input.classList.remove('err');
-          const val = input.value.replace(/[^1-9]/g,'');
+          const val = input.value.normalize('NFKC').replace(/[^1-9]/g,'');
           input.value=val;
           puzzle[r][c]=val?Number(val):0;
           statusEl.textContent='進行中';
