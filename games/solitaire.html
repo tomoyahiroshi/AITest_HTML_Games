@@ -475,6 +475,7 @@
 
       div.addEventListener("click", (event) => {
         if (type === "stock") {
+          event.stopPropagation();
           handleStockClick();
           return;
         }
