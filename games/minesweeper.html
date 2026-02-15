@@ -70,13 +70,14 @@ function showConfirmDialog(message){
 function showResultDialog(message){
   if(typeof confirmDialogEl.showModal!=='function'){
     window.alert(message);
+    startNewGame();
     return;
   }
   confirmCancelEl.hidden=true;
   confirmOkEl.textContent='OK';
   confirmMessageEl.textContent=message;
   confirmDialogEl.showModal();
-  const onOk=()=>{cleanup();confirmDialogEl.close();};
+  const onOk=()=>{cleanup();confirmDialogEl.close();startNewGame();};
   const cleanup=()=>{confirmOkEl.removeEventListener('click',onOk);};
   confirmOkEl.addEventListener('click',onOk);
 }
