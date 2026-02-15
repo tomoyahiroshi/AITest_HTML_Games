@@ -107,6 +107,7 @@
       margin-top: 5px;
       cursor: pointer;
       user-select: none;
+      touch-action: none;
     }
     .card.red { color: #dc2626; }
     .card.back {
@@ -713,22 +714,10 @@
       }
 
       const isDraggable = state.status === "PLAYING" && selectableCard(type, pileIndex, cardPos);
-      div.draggable = isDraggable;
       if (isDraggable) {
         div.addEventListener("pointerdown", (event) => {
           if (event.pointerType === "mouse" && event.button !== 0) return;
           startPointerDrag(event, div, type, pileIndex, cardPos);
-        });
-        div.addEventListener("dragstart", (event) => {
-          selection = buildSelection(type, pileIndex, cardPos);
-          div.classList.add("dragging");
-          event.dataTransfer.effectAllowed = "move";
-          event.dataTransfer.setData("text/plain", JSON.stringify(selection.source));
-          render();
-        });
-        div.addEventListener("dragend", () => {
-          div.classList.remove("dragging");
-          render();
         });
       }
       return div;
