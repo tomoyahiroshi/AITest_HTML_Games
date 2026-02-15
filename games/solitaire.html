@@ -194,6 +194,7 @@
     let state = null;
     let selection = null;
     let clearDialogShown = false;
+    let pointerDrag = null;
 
     function cardColor(suit) {
       return suit === "♥" || suit === "♦" ? "red" : "black";
@@ -345,6 +346,148 @@
 
     function setMessage(text = "") {
       messageEl.textContent = text;
+    }
+
+    function clearDropHighlights() {
+      document.querySelectorAll(".pile.drop-ok").forEach((el) => el.classList.remove("drop-ok"));
+    }
+
+    function canDropSelectionTo(selectionInfo, destType, destIndex) {
+      if (!selectionInfo || state.status !== "PLAYING") return false;
+      const dstPile = getPileRef(state, destType, destIndex);
+      if (!dstPile) return false;
+      if (destType === "tableau") {
+        return canMoveToTableau(selectionInfo.stack, dstPile, state.cardsById);
+      }
+      if (destType === "foundation") {
+        return selectionInfo.stack.length === 1 && canMoveToFoundation(selectionInfo.stack[0], dstPile, state.cardsById);
+      }
+      return false;
+    }
+
+    function findDropTargetFromPoint(clientX, clientY, selectionInfo) {
+      const hovered = document.elementFromPoint(clientX, clientY);
+      if (!hovered) return null;
+      const pileEl = hovered.closest(".pile");
+      if (!pileEl) return null;
+      const destType = pileEl.dataset.pileType;
+      const destIndex = Number(pileEl.dataset.pileIndex);
+      if (!Number.isInteger(destIndex) || (destType !== "tableau" && destType !== "foundation")) return null;
+      if (!canDropSelectionTo(selectionInfo, destType, destIndex)) return null;
+      return { el: pileEl, type: destType, index: destIndex };
+    }
+
+    function createDragPreview(stack) {
+      const layer = document.createElement("div");
+      layer.style.position = "fixed";
+      layer.style.left = "0";
+      layer.style.top = "0";
+      layer.style.pointerEvents = "none";
+      layer.style.zIndex = "9999";
+
+      stack.forEach((cardId, i) => {
+        const card = state.cardsById[cardId];
+        const previewCard = document.createElement("div");
+        previewCard.className = "card";
+        if (card.color === "red") previewCard.classList.add("red");
+        previewCard.style.position = "absolute";
+        previewCard.style.top = `${i * 24}px`;
+        previewCard.style.left = "0";
+        previewCard.style.margin = "0";
+        previewCard.style.boxShadow = "0 8px 20px rgba(0,0,0,.35)";
+
+        const rank = document.createElement("span");
+        rank.className = "rank";
+        rank.textContent = RANKS[card.rank];
+        const suit = document.createElement("span");
+        suit.className = "suit";
+        suit.textContent = card.suit;
+        previewCard.append(rank, suit);
+        layer.appendChild(previewCard);
+      });
+
+      document.body.appendChild(layer);
+      return layer;
+    }
+
+    function endPointerDrag(cancelled = false) {
+      if (!pointerDrag) return;
+      pointerDrag.cardEl.classList.remove("dragging");
+      if (pointerDrag.previewEl?.parentNode) pointerDrag.previewEl.parentNode.removeChild(pointerDrag.previewEl);
+      if (!cancelled && pointerDrag.dropTarget) {
+        tryMoveTo(pointerDrag.dropTarget.type, pointerDrag.dropTarget.index);
+      } else {
+        selection = null;
+        render();
+      }
+      clearDropHighlights();
+      pointerDrag = null;
+    }
+
+    function startPointerDrag(event, cardEl, type, pileIndex, cardPos) {
+      if (event.button !== undefined && event.button !== 0) return;
+      const dragSelection = buildSelection(type, pileIndex, cardPos);
+      if (!dragSelection) return;
+
+      selection = dragSelection;
+      const originRect = cardEl.getBoundingClientRect();
+      const offsetX = event.clientX - originRect.left;
+      const offsetY = event.clientY - originRect.top;
+      pointerDrag = {
+        pointerId: event.pointerId,
+        cardEl,
+        startX: event.clientX,
+        startY: event.clientY,
+        offsetX,
+        offsetY,
+        moved: false,
+        previewEl: null,
+        dropTarget: null,
+      };
+
+      cardEl.setPointerCapture(event.pointerId);
+      cardEl.classList.add("dragging");
+
+      const onPointerMove = (moveEvent) => {
+        if (!pointerDrag || moveEvent.pointerId !== pointerDrag.pointerId) return;
+        const dx = moveEvent.clientX - pointerDrag.startX;
+        const dy = moveEvent.clientY - pointerDrag.startY;
+        if (!pointerDrag.moved && Math.hypot(dx, dy) > 6) {
+          pointerDrag.moved = true;
+          pointerDrag.previewEl = createDragPreview(selection.stack);
+        }
+        if (!pointerDrag.moved) return;
+
+        const x = moveEvent.clientX - pointerDrag.offsetX;
+        const y = moveEvent.clientY - pointerDrag.offsetY;
+        pointerDrag.previewEl.style.transform = `translate(${x}px, ${y}px)`;
+
+        clearDropHighlights();
+        pointerDrag.dropTarget = findDropTargetFromPoint(moveEvent.clientX, moveEvent.clientY, selection);
+        if (pointerDrag.dropTarget) pointerDrag.dropTarget.el.classList.add("drop-ok");
+      };
+
+      const stopEvents = () => {
+        cardEl.removeEventListener("pointermove", onPointerMove);
+        cardEl.removeEventListener("pointerup", onPointerUp);
+        cardEl.removeEventListener("pointercancel", onPointerCancel);
+      };
+
+      const onPointerUp = (upEvent) => {
+        if (!pointerDrag || upEvent.pointerId !== pointerDrag.pointerId) return;
+        stopEvents();
+        endPointerDrag(!pointerDrag.moved);
+      };
+
+      const onPointerCancel = (cancelEvent) => {
+        if (!pointerDrag || cancelEvent.pointerId !== pointerDrag.pointerId) return;
+        stopEvents();
+        endPointerDrag(true);
+      };
+
+      cardEl.addEventListener("pointermove", onPointerMove);
+      cardEl.addEventListener("pointerup", onPointerUp);
+      cardEl.addEventListener("pointercancel", onPointerCancel);
     }
 
     function showConfirmDialog(message) {
@@ -572,6 +715,10 @@
       const isDraggable = state.status === "PLAYING" && selectableCard(type, pileIndex, cardPos);
       div.draggable = isDraggable;
       if (isDraggable) {
+        div.addEventListener("pointerdown", (event) => {
+          if (event.pointerType === "mouse" && event.button !== 0) return;
+          startPointerDrag(event, div, type, pileIndex, cardPos);
+        });
         div.addEventListener("dragstart", (event) => {
           selection = buildSelection(type, pileIndex, cardPos);
           div.classList.add("dragging");
@@ -590,10 +737,7 @@
     function enableDrop(pileEl, destType, destIndex) {
       pileEl.addEventListener("dragover", (event) => {
         if (!selection || state.status !== "PLAYING") return;
-        const dstPile = getPileRef(state, destType, destIndex);
-        const canDrop = destType === "tableau"
-          ? canMoveToTableau(selection.stack, dstPile, state.cardsById)
-          : selection.stack.length === 1 && canMoveToFoundation(selection.stack[0], dstPile, state.cardsById);
+        const canDrop = canDropSelectionTo(selection, destType, destIndex);
         if (canDrop) {
           event.preventDefault();
           pileEl.classList.add("drop-ok");
@@ -610,6 +754,8 @@
 
     function renderPile(pileEl, pile, type, index, offset = 0) {
       pileEl.innerHTML = "";
+      pileEl.dataset.pileType = type;
+      pileEl.dataset.pileIndex = String(index);
       pileEl.classList.toggle("foundation", type === "foundation");
       pileEl.classList.toggle("placeholder", pile.length === 0);
       if (type === "tableau") {
