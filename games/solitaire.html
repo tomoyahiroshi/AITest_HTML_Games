@@ -425,7 +425,12 @@
 
     function endPointerDrag(cancelled = false) {
       if (!pointerDrag) return;
+      const wasMoved = pointerDrag.moved;
       cleanupPointerDragVisuals();
+      if (!wasMoved) {
+        pointerDrag = null;
+        return;
+      }
       if (!cancelled && pointerDrag.dropTarget) {
         tryMoveTo(pointerDrag.dropTarget.type, pointerDrag.dropTarget.index);
       } else {
@@ -437,10 +442,8 @@
 
     function startPointerDrag(event, cardEl, type, pileIndex, cardPos) {
       if (event.button !== undefined && event.button !== 0) return;
-      const dragSelection = buildSelection(type, pileIndex, cardPos);
-      if (!dragSelection) return;
+      if (!selectableCard(type, pileIndex, cardPos)) return;
 
-      selection = dragSelection;
       const originRect = cardEl.getBoundingClientRect();
       const offsetX = event.clientX - originRect.left;
       const offsetY = event.clientY - originRect.top;
@@ -454,6 +457,9 @@
         moved: false,
         previewEl: null,
         dropTarget: null,
+        sourceType: type,
+        sourceIndex: pileIndex,
+        sourcePos: cardPos,
       };
 
       cardEl.setPointerCapture(event.pointerId);
@@ -464,8 +470,14 @@
         const dx = moveEvent.clientX - pointerDrag.startX;
         const dy = moveEvent.clientY - pointerDrag.startY;
         if (!pointerDrag.moved && Math.hypot(dx, dy) > 6) {
+          const dragSelection = buildSelection(pointerDrag.sourceType, pointerDrag.sourceIndex, pointerDrag.sourcePos);
+          if (!dragSelection) {
+            endPointerDrag(true);
+            return;
+          }
           pointerDrag.moved = true;
-          pointerDrag.previewEl = createDragPreview(selection.stack);
+          selection = dragSelection;
+          pointerDrag.previewEl = createDragPreview(dragSelection.stack);
         }
         if (!pointerDrag.moved) return;
 
