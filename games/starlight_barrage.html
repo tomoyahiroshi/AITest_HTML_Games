@@ -160,6 +160,12 @@
         return Math.max(8, Math.floor(baseInterval / loopIntensity(0.1)));
       }
 
+      function scaledBossShotInterval(baseInterval) {
+        const effectiveLoop = Math.max(state.loop, 3);
+        const intensity = 0.1 + (effectiveLoop - 1) * 0.1;
+        return Math.max(8, Math.floor(baseInterval / intensity));
+      }
+
       function isPressed(code) {
         return !!keys[code] && !prevKeys[code];
       }
@@ -459,26 +465,26 @@
 
             if (variant === 0) {
               e.x = W / 2 + Math.sin(e.t / 60) * 120;
-              if (e.t % scaledShotInterval(rage ? 45 : 54) === 0) {
+              if (e.t % scaledBossShotInterval(rage ? 45 : 54) === 0) {
                 aimedShot(e.x, e.y + 8, speedMul, 0);
                 aimedShot(e.x, e.y + 8, speedMul, 0.14);
                 aimedShot(e.x, e.y + 8, speedMul, -0.14);
               }
-              if (e.t % scaledShotInterval(rage ? 18 : 22) === 0) {
+              if (e.t % scaledBossShotInterval(rage ? 18 : 22) === 0) {
                 ringBullets(e.x, e.y + 6, scaledBulletCount(rage ? 12 : 9), diffRate(0.9, 0.03), e.t * 0.08, '#b388ff');
               }
             } else if (variant === 1) {
               e.x = W / 2 + Math.sin(e.t / 52) * 90;
               e.y = 95 + Math.sin(e.t / 34) * 16;
-              if (e.t % scaledShotInterval(rage ? 16 : 22) === 0) {
+              if (e.t % scaledBossShotInterval(rage ? 16 : 22) === 0) {
                 for (let i = -3; i <= 3; i++) aimedShot(e.x, e.y + 8, speedMul, i * 0.08);
               }
-              if (e.t % scaledShotInterval(rage ? 42 : 52) === 0) {
+              if (e.t % scaledBossShotInterval(rage ? 42 : 52) === 0) {
                 ringBullets(e.x, e.y + 10, scaledBulletCount(rage ? 14 : 10), diffRate(1.05, 0.03), e.t * 0.04, '#5fe4ff');
               }
             } else {
               e.x = W / 2 + Math.sin(e.t / 68) * 150;
-              if (e.t % scaledShotInterval(rage ? 35 : 45) === 0) {
+              if (e.t % scaledBossShotInterval(rage ? 35 : 45) === 0) {
                 for (let i = 0; i < 2; i++) {
                   const sx = i === 0 ? 38 : -38;
                   for (let a = -2; a <= 2; a++) {
@@ -486,7 +492,7 @@
                   }
                 }
               }
-              if (e.t % scaledShotInterval(rage ? 20 : 30) === 0) {
+              if (e.t % scaledBossShotInterval(rage ? 20 : 30) === 0) {
                 for (let i = 0; i < 2; i++) {
                   const shift = e.t * 0.08 + i * Math.PI;
                   ringBullets(e.x + Math.cos(shift) * 55, e.y + 10, scaledBulletCount(8), diffRate(0.95, 0.03), shift, '#ff79a7');
@@ -519,52 +525,52 @@
             if (variant === 0) {
               e.x = W / 2 + Math.sin(e.t / 75) * 150;
               if (phase === 1) {
-                if (e.t % scaledShotInterval(46) === 0) {
+                if (e.t % scaledBossShotInterval(46) === 0) {
                   ringBullets(e.x, e.y, scaledBulletCount(18), speed, e.t * 0.04, '#73e6ff');
                   aimedShot(e.x, e.y, speed + 0.5);
                 }
               } else if (phase === 2) {
-                if (e.t % scaledShotInterval(16) === 0) {
+                if (e.t % scaledBossShotInterval(16) === 0) {
                   const lane = ((Math.floor(e.t / 42) % 10) - 5) * 28;
                   shootEnemyBullet(W / 2 + lane, 0, 0, speed + 1.2, 5, '#9af079');
                   shootEnemyBullet(W / 2 - lane, 0, 0, speed + 1.2, 5, '#9af079');
                 }
-                if (e.t % scaledShotInterval(34) === 0) ringBullets(e.x, e.y + 6, scaledBulletCount(10), speed, e.t * 0.15, '#ffaa6a');
+                if (e.t % scaledBossShotInterval(34) === 0) ringBullets(e.x, e.y + 6, scaledBulletCount(10), speed, e.t * 0.15, '#ffaa6a');
               } else {
-                if (e.t % scaledShotInterval(20) === 0) {
+                if (e.t % scaledBossShotInterval(20) === 0) {
                   for (let i = 0; i < 3; i++) {
                     const shift = (e.t * 0.12) + i * 0.8;
                     ringBullets(e.x + Math.sin(shift) * 90, e.y + Math.cos(shift * 0.8) * 12, scaledBulletCount(10), speed + 0.5, shift, '#ff6cd6');
                   }
                 }
-                if (e.t % scaledShotInterval(28) === 0) {
+                if (e.t % scaledBossShotInterval(28) === 0) {
                   for (let i = -3; i <= 3; i++) aimedShot(e.x, e.y, speed + 1, i * 0.09);
                 }
               }
             } else if (variant === 1) {
               e.x = W / 2 + Math.sin(e.t / 58) * 118;
               e.y = 102 + Math.cos(e.t / 40) * 14;
-              if (phase === 1 && e.t % scaledShotInterval(42) === 0) {
+              if (phase === 1 && e.t % scaledBossShotInterval(42) === 0) {
                 for (let i = 0; i < 2; i++) ringBullets(e.x, e.y, scaledBulletCount(12), speed + i * 0.3, e.t * 0.05 + i * 0.5, '#76f7ff');
               }
-              if (phase >= 2 && e.t % scaledShotInterval(24) === 0) {
+              if (phase >= 2 && e.t % scaledBossShotInterval(24) === 0) {
                 for (let i = 0; i < 7; i++) {
                   const px = 40 + i * 66;
                   shootEnemyBullet(px, -8, 0, speed + 1.1, 4, '#ffdb68');
                 }
               }
-              if (phase === 3 && e.t % scaledShotInterval(18) === 0) {
+              if (phase === 3 && e.t % scaledBossShotInterval(18) === 0) {
                 for (let i = -4; i <= 4; i++) aimedShot(e.x, e.y + 6, speed + 1, i * 0.07);
               }
             } else {
               e.x = W / 2 + Math.sin(e.t / 90) * 170;
-              if (phase === 1 && e.t % scaledShotInterval(36) === 0) {
+              if (phase === 1 && e.t % scaledBossShotInterval(36) === 0) {
                 for (let i = 0; i < 5; i++) {
                   const ox = ((i - 2) * 35);
                   ringBullets(e.x + ox, e.y + 5, scaledBulletCount(6), speed + 0.2, e.t * 0.05 + i * 0.2, '#b89dff');
                 }
               }
-              if (phase >= 2 && e.t % scaledShotInterval(30) === 0) {
+              if (phase >= 2 && e.t % scaledBossShotInterval(30) === 0) {
                 for (let i = 0; i < 2; i++) {
                   const edgeX = i === 0 ? 20 : W - 20;
                   for (let j = 0; j < 5; j++) {
@@ -574,7 +580,7 @@
                   }
                 }
               }
-              if (phase === 3 && e.t % scaledShotInterval(20) === 0) {
+              if (phase === 3 && e.t % scaledBossShotInterval(20) === 0) {
                 ringBullets(e.x, e.y + 8, scaledBulletCount(20), speed + 0.55, e.t * 0.07, '#ff6cd6');
               }
             }
