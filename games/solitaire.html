@@ -41,7 +41,8 @@
       transition: border-color .12s ease, box-shadow .12s ease;
     }
     .pile.tableau { min-height: 420px; }
-    .pile.tableau .card {
+    .pile.tableau .card,
+    .pile.stock .card {
       position: absolute;
       left: 3px;
       margin-top: 0;
@@ -115,7 +116,7 @@
     </div>
 
     <div class="row" style="margin-bottom:14px;">
-      <div id="stock" class="pile placeholder" data-label="STOCK"></div>
+      <div id="stock" class="pile placeholder stock" data-label="STOCK"></div>
       <div id="waste" class="pile placeholder" data-label="WASTE"></div>
       <div class="spacer"></div>
       <div id="f0" class="pile placeholder" data-label="A♠"></div>
@@ -422,6 +423,9 @@
       div.className = "card";
       if (type === "tableau") {
         div.style.top = `${offsetPx}px`;
+      } else if (type === "stock") {
+        div.style.top = `${offsetPx}px`;
+        div.style.left = `${offsetPx}px`;
       } else {
         div.style.marginTop = `${offsetPx}px`;
       }
@@ -511,7 +515,12 @@
       }
 
       pile.forEach((cardId, i) => {
-        const cardEl = cardNode(cardId, type, index, i, type === "tableau" ? i * offset : (i === 0 ? 0 : offset));
+        const cardOffset = type === "tableau"
+          ? i * offset
+          : type === "stock"
+            ? i * offset
+            : (i === 0 ? 0 : offset);
+        const cardEl = cardNode(cardId, type, index, i, cardOffset);
         pileEl.appendChild(cardEl);
       });
 
@@ -541,7 +550,8 @@
       verifyIntegrity(state);
       updateStatus();
 
-      renderPile(stockEl, state.stock.length ? [state.stock[state.stock.length - 1]] : [], "stock", 0);
+      const visibleStock = state.stock.length ? state.stock.slice(-3) : [];
+      renderPile(stockEl, visibleStock, "stock", 0, 3);
       stockEl.onclick = handleStockClick;
       stockEl.classList.toggle("placeholder", state.stock.length === 0);
 
