@@ -57,6 +57,7 @@
       const PHASE_STAGE_BOSS = 'PHASE_STAGE_BOSS';
       const PHASE_CLEAR_TRANSITION = 'PHASE_CLEAR_TRANSITION';
       const MID_AB_DURATION_SCALE = 1.5;
+      const SMALL_FODDER_SPAWN_MULTIPLIER = 1.5;
 
       function midABFrame(baseFrame) {
         return Math.round(baseFrame * MID_AB_DURATION_SCALE);
@@ -125,7 +126,8 @@
         enemies: [],
         stars: [],
         explosions: [],
-        maxEnemyBullets: 550
+        maxEnemyBullets: 550,
+        smallFodderSpawnCarry: 0
       };
 
       const player = {
@@ -219,11 +221,28 @@
         return dx * dx + dy * dy;
       }
 
-      function spawnEnemy(enemy) {
-        const spawned = { alive: true, t: 0, ...enemy };
+      function isSmallFodderEnemy(enemy) {
+        return !enemy.type?.includes('Boss') && enemy.hp === 1 && enemy.sizeClass !== 'medium';
+      }
+
+      function spawnEnemy(enemy, options = {}) {
+        const { allowBonus = true } = options;
+        const spawned = { alive: true, t: 0, hitShake: 0, hitShakeMag: 0, ...enemy };
         state.enemies.push(spawned);
         if (!spawned.type.includes('Boss') && (state.phase === PHASE_MID_A || state.phase === PHASE_MID_B)) {
           state.phaseEnemySpawned++;
+        }
+
+        if (!allowBonus || SMALL_FODDER_SPAWN_MULTIPLIER <= 1 || !isSmallFodderEnemy(spawned)) return;
+        state.smallFodderSpawnCarry += SMALL_FODDER_SPAWN_MULTIPLIER - 1;
+        if (state.smallFodderSpawnCarry >= 1) {
+          state.smallFodderSpawnCarry -= 1;
+          const cloneOffset = (Math.random() - 0.5) * 26;
+          spawnEnemy({
+            ...enemy,
+            x: enemy.x + cloneOffset,
+            y: enemy.y - 14
+          }, { allowBonus: false });
         }
       }
 
@@ -270,6 +289,19 @@
             color: colors[(Math.random() * colors.length) | 0]
           });
         }
+      }
+
+      function spawnHitEffect(x, y, strong = false) {
+        spawnExplosion(x, y, {
+          count: strong ? 12 : 8,
+          speed: strong ? 2.3 : 1.8,
+          life: strong ? 20 : 16,
+          radius: strong ? 2.2 : 1.6,
+          gravity: 0,
+          colors: strong
+            ? ['#fff4bf', '#ffb8de', '#9ad9ff']
+            : ['#fff4bf', '#ffc8da', '#9ed7ff']
+        });
       }
 
       function spawnSkirmisherWave(count = 5, yStart = 90) {
@@ -812,6 +844,7 @@
           state.stageBossSpawnTimer = -1;
           state.stageBossDeployTimer = -1;
           state.stageBossHasSpawned = false;
+          state.smallFodderSpawnCarry = 0;
         }
         if (next === PHASE_STAGE_BOSS) {
           state.warningTimer = 90;
@@ -966,6 +999,11 @@
                     ? ['#fff5ba', '#ff9f78', '#ff77b2', '#ffffff']
                     : ['#ffe2b9', '#ff95b7', '#fff7da']
                 });
+              } else {
+                const isBoss = e.type.includes('Boss');
+                spawnHitEffect(b.x, b.y, isBoss || e.sizeClass === 'medium');
+                e.hitShake = isBoss ? 9 : 7;
+                e.hitShakeMag = isBoss ? 4.2 : e.sizeClass === 'medium' ? 3 : 2.2;
               }
               break;
             }
@@ -1013,6 +1051,10 @@
           p.vx *= 0.98;
           p.vy = p.vy * 0.98 + p.gravity;
           p.age++;
+        }
+
+        for (const e of state.enemies) {
+          if (e.hitShake > 0) e.hitShake--;
         }
 
         state.enemies = state.enemies.filter((e) => e.alive);
@@ -1072,7 +1114,20 @@
           ctx.fillRect(b.x - 1.5, b.y - 8, 3, 12);
         }
 
-        for (const e of state.enemies) e.draw(e);
+        for (const e of state.enemies) {
+          if (e.hitShake > 0) {
+            const shakeScale = e.hitShake / Math.max(1, e.hitShake + 2);
+            const mag = e.hitShakeMag * shakeScale;
+            const ox = (Math.random() - 0.5) * mag;
+            const oy = (Math.random() - 0.5) * mag;
+            ctx.save();
+            ctx.translate(ox, oy);
+            e.draw(e);
+            ctx.restore();
+          } else {
+            e.draw(e);
+          }
+        }
 
         for (const b of state.enemyBullets) {
           ctx.fillStyle = b.color;
