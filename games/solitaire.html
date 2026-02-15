@@ -577,8 +577,7 @@
         .map((cardId, i, cards) => ({
           cardId,
           cardPos: state.waste.length - cards.length + i,
-        }))
-        .reverse();
+        }));
       renderPile(wasteEl, visibleWaste, "waste", 0, 28);
 
       foundationEls.forEach((el, i) => renderPile(el, state.foundation[i], "foundation", i));
