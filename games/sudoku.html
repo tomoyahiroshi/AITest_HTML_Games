@@ -99,7 +99,7 @@
           const val = input.value.normalize('NFKC').replace(/[^1-9]/g,'');
           input.value=val;
           puzzle[r][c]=val?Number(val):0;
-          if(highlightedNumber) updateHighlights(highlightedNumber);
+          updateHighlights(val ? Number(val) : null);
           statusEl.textContent='進行中';
         });
         gridEl.appendChild(input);
