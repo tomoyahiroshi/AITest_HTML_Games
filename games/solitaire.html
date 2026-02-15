@@ -138,6 +138,7 @@
     }
     .card.selected { outline: 3px solid var(--accent); }
     .card.dragging { opacity: .72; }
+    .card.drag-source-hidden { visibility: hidden; }
   </style>
 </head>
 <body>
@@ -413,6 +414,7 @@
 
     function cleanupPointerDragVisuals() {
       if (!pointerDrag) return;
+      setPointerDragSourceHidden(false);
       pointerDrag.cardEl.classList.remove("dragging");
       if (pointerDrag.cardEl.hasPointerCapture?.(pointerDrag.pointerId)) {
         pointerDrag.cardEl.releasePointerCapture(pointerDrag.pointerId);
@@ -421,6 +423,19 @@
         pointerDrag.previewEl.parentNode.removeChild(pointerDrag.previewEl);
       }
       clearDropHighlights();
+    }
+
+    function setPointerDragSourceHidden(hidden) {
+      if (!pointerDrag) return;
+      document.querySelectorAll(`.card[data-type="${pointerDrag.sourceType}"][data-index="${pointerDrag.sourceIndex}"]`).forEach((cardEl) => {
+        const cardPos = Number(cardEl.dataset.pos);
+        const shouldHide = pointerDrag.sourceType === "tableau"
+          ? cardPos >= pointerDrag.sourcePos
+          : cardPos === pointerDrag.sourcePos;
+        if (shouldHide) {
+          cardEl.classList.toggle("drag-source-hidden", hidden);
+        }
+      });
     }
 
     function endPointerDrag(cancelled = false) {
@@ -478,6 +493,7 @@
           pointerDrag.moved = true;
           selection = dragSelection;
           pointerDrag.previewEl = createDragPreview(dragSelection.stack);
+          setPointerDragSourceHidden(true);
         }
         if (!pointerDrag.moved) return;
 
