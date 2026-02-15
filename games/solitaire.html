@@ -447,6 +447,10 @@
       }
 
       div.addEventListener("click", (event) => {
+        if (type === "stock") {
+          handleStockClick();
+          return;
+        }
         event.stopPropagation();
         onCardClicked(type, pileIndex, cardPos);
       });
