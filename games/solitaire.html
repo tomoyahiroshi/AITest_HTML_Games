@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>ソリティア（Klondike / Draw 1）</title>
+  <title>ソリティア（Klondike / Draw 3）</title>
   <style>
     :root {
       --card-w: 88px;
@@ -120,7 +120,7 @@
 </head>
 <body>
   <main>
-    <h1>ソリティア（Klondike / Draw 1）</h1>
+    <h1>ソリティア（Klondike / Draw 3）</h1>
     <div class="toolbar">
       <button id="newBtn" aria-label="新規ゲーム開始">新規ゲーム</button>
       <span id="status" class="status">PLAYING</span>
@@ -145,6 +145,7 @@
     const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
     const TABLEAU_COUNT = 7;
     const FOUNDATION_COUNT = 4;
+    const DRAW_COUNT = 3;
 
     const stockEl = document.getElementById("stock");
     const wasteEl = document.getElementById("waste");
@@ -248,9 +249,12 @@
 
       if (move.type === "draw") {
         if (!next.stock.length) return prevState;
-        const id = next.stock.pop();
-        cardsById[id].faceUp = true;
-        next.waste.push(id);
+        const drawTotal = Math.min(DRAW_COUNT, next.stock.length);
+        for (let i = 0; i < drawTotal; i += 1) {
+          const id = next.stock.pop();
+          cardsById[id].faceUp = true;
+          next.waste.push(id);
+        }
       } else if (move.type === "recycle") {
         if (next.stock.length || !next.waste.length) return prevState;
         while (next.waste.length) {
