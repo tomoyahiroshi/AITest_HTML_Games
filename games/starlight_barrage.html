@@ -41,7 +41,7 @@
 <body>
   <div class="wrap">
     <canvas id="game" width="480" height="640"></canvas>
-    <div class="help">Move: WASD / Arrow Keys ・ Shot: Space(hold) ・ Select: ↑↓ + Space / Click ・ Retry: R</div>
+    <div class="help">Move: WASD / Arrow Keys ・ Shot: Space(hold) ・ Start: Space / Enter / Click ・ Retry: R</div>
   </div>
 
   <script>
@@ -106,7 +106,6 @@
         score: 0,
         lives: 3,
         inTitle: true,
-        menuIndex: 0,
         debugMode: false,
         frame: 0,
         gameOver: false,
@@ -152,7 +151,10 @@
         boss: 40
       };
 
-      const titleMenu = ['game Start', 'Debug Start'];
+      const titleButtons = {
+        start: { x: W / 2, y: 332, w: 250, h: 54 },
+        debug: { x: W - 66, y: H - 24, w: 108, h: 28 }
+      };
 
       for (let i = 0; i < 90; i++) {
         state.stars.push({ x: Math.random() * W, y: Math.random() * H, s: 0.5 + Math.random() * 2 });
@@ -205,7 +207,6 @@
         state.lives = 3;
         state.gameOver = false;
         state.inTitle = false;
-        state.menuIndex = 0;
         state.debugMode = debugStart;
         changePhase(PHASE_MID_A);
         state.playerBullets.length = 0;
@@ -1352,61 +1353,61 @@
           ctx.fillText('STARLIGHT', W / 2, 170);
           ctx.fillText('BARRAGE', W / 2, 218);
 
-          const startY = 320;
-          const itemW = 250;
-          const itemH = 52;
+          const startBtn = titleButtons.start;
+          const debugBtn = titleButtons.debug;
           ctx.font = 'bold 24px monospace';
 
-          for (let i = 0; i < titleMenu.length; i++) {
-            const y = startY + i * 74;
-            const selected = i === state.menuIndex;
-            ctx.fillStyle = selected ? 'rgba(128,180,255,0.32)' : 'rgba(255,255,255,0.08)';
-            ctx.fillRect(W / 2 - itemW / 2, y - itemH / 2, itemW, itemH);
-            ctx.strokeStyle = selected ? '#8fd8ff' : 'rgba(255,255,255,0.35)';
-            ctx.strokeRect(W / 2 - itemW / 2, y - itemH / 2, itemW, itemH);
-            ctx.fillStyle = selected ? '#b9f2ff' : '#dce8ff';
-            ctx.fillText(titleMenu[i], W / 2, y + 8);
-          }
+          ctx.fillStyle = 'rgba(128,180,255,0.32)';
+          ctx.fillRect(startBtn.x - startBtn.w / 2, startBtn.y - startBtn.h / 2, startBtn.w, startBtn.h);
+          ctx.strokeStyle = '#8fd8ff';
+          ctx.strokeRect(startBtn.x - startBtn.w / 2, startBtn.y - startBtn.h / 2, startBtn.w, startBtn.h);
+          ctx.fillStyle = '#b9f2ff';
+          ctx.fillText('game Start', startBtn.x, startBtn.y + 8);
+
+          const debugHover =
+            mouse.x >= debugBtn.x - debugBtn.w / 2 &&
+            mouse.x <= debugBtn.x + debugBtn.w / 2 &&
+            mouse.y >= debugBtn.y - debugBtn.h / 2 &&
+            mouse.y <= debugBtn.y + debugBtn.h / 2;
+          ctx.fillStyle = debugHover ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.07)';
+          ctx.fillRect(debugBtn.x - debugBtn.w / 2, debugBtn.y - debugBtn.h / 2, debugBtn.w, debugBtn.h);
+          ctx.strokeStyle = 'rgba(220,232,255,0.28)';
+          ctx.strokeRect(debugBtn.x - debugBtn.w / 2, debugBtn.y - debugBtn.h / 2, debugBtn.w, debugBtn.h);
+          ctx.fillStyle = debugHover ? '#dce8ff' : 'rgba(220,232,255,0.7)';
+          ctx.font = '11px monospace';
+          ctx.fillText('debug start', debugBtn.x, debugBtn.y + 3);
 
           ctx.fillStyle = '#cdd8f7';
           ctx.font = '14px monospace';
-          ctx.fillText('Select: ↑↓ or W/S, Start: Space / Enter / Click', W / 2, 510);
+          ctx.fillText('Start: Space / Enter / Click', W / 2, 510);
         }
       }
 
       function updateTitle() {
-        const upPressed = isPressed('ArrowUp') || isPressed('KeyW');
-        const downPressed = isPressed('ArrowDown') || isPressed('KeyS');
         const confirmPressed = isPressed('Space') || isPressed('Enter');
 
-        if (upPressed) {
-          state.menuIndex = (state.menuIndex + titleMenu.length - 1) % titleMenu.length;
-        }
-        if (downPressed) {
-          state.menuIndex = (state.menuIndex + 1) % titleMenu.length;
-        }
-
         if (mouse.clicked) {
-          const startY = 320;
-          const itemW = 250;
-          const itemH = 52;
-          for (let i = 0; i < titleMenu.length; i++) {
-            const y = startY + i * 74;
-            const left = W / 2 - itemW / 2;
-            const right = W / 2 + itemW / 2;
-            const top = y - itemH / 2;
-            const bottom = y + itemH / 2;
-            if (mouse.x >= left && mouse.x <= right && mouse.y >= top && mouse.y <= bottom) {
-              state.menuIndex = i;
-              beginGame(i === 1);
-              break;
-            }
-          }
+          const startBtn = titleButtons.start;
+          const debugBtn = titleButtons.debug;
+          const startHit =
+            mouse.x >= startBtn.x - startBtn.w / 2 &&
+            mouse.x <= startBtn.x + startBtn.w / 2 &&
+            mouse.y >= startBtn.y - startBtn.h / 2 &&
+            mouse.y <= startBtn.y + startBtn.h / 2;
+          const debugHit =
+            mouse.x >= debugBtn.x - debugBtn.w / 2 &&
+            mouse.x <= debugBtn.x + debugBtn.w / 2 &&
+            mouse.y >= debugBtn.y - debugBtn.h / 2 &&
+            mouse.y <= debugBtn.y + debugBtn.h / 2;
+
+          if (startHit) beginGame(false);
+          else if (debugHit) beginGame(true);
+
           mouse.clicked = false;
         }
 
         if (confirmPressed) {
-          beginGame(state.menuIndex === 1);
+          beginGame(false);
         }
       }
 
@@ -1416,7 +1417,7 @@
         if (state.inTitle) {
           updateTitle();
           render();
-          for (const code of ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS', 'Space', 'Enter']) {
+          for (const code of ['Space', 'Enter']) {
             prevKeys[code] = !!keys[code];
           }
           requestAnimationFrame(tick);
@@ -1435,7 +1436,7 @@
         updateEntities();
         render();
 
-        for (const code of ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS', 'Space', 'Enter']) {
+        for (const code of ['Space', 'Enter']) {
           prevKeys[code] = !!keys[code];
         }
 
