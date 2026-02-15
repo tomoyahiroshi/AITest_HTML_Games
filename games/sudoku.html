@@ -35,10 +35,18 @@
     <div id="grid" class="grid"></div>
     <div id="status" class="status">進行中</div>
   </div>
+  <dialog id="resultDialog">
+    <p id="resultMessage"></p>
+    <form method="dialog">
+      <button>閉じる</button>
+    </form>
+  </dialog>
   <script>
     const gridEl = document.getElementById('grid');
     const statusEl = document.getElementById('status');
     const difficultyEl = document.getElementById('difficulty');
+    const resultDialogEl = document.getElementById('resultDialog');
+    const resultMessageEl = document.getElementById('resultMessage');
     let solution = [], puzzle = [], initial = [];
     let highlightedNumber = null;
 
@@ -107,6 +115,16 @@
       }
       updateHighlights(null);
     }
+
+    function showResultDialog(message){
+      resultMessageEl.textContent = message;
+      if(typeof resultDialogEl.showModal === 'function'){
+        resultDialogEl.showModal();
+      }else{
+        window.alert(message);
+      }
+    }
+
     function check(){
       const cells=[...document.querySelectorAll('.cell')];
       cells.forEach(c=>c.classList.remove('err'));
@@ -117,6 +135,7 @@
         if(puzzle[r][c]!==solution[r][c]){ok=false;cells[idx].classList.add('err');}
       }
       statusEl.textContent = ok&&complete ? 'クリア！' : '誤りまたは未入力があります';
+      if(ok&&complete) showResultDialog('おめでとうございます！数独をクリアしました。');
     }
     function reset(){
       const shouldReset = window.confirm('現在の入力内容をリセットします。よろしいですか？');
