@@ -1,9 +1,15 @@
 <!doctype html>
 <html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>マインスイーパー</title>
 <style>
-body{font-family:Arial;background:#f1f5f9;margin:0;padding:20px}h1{margin-top:0}.top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-#board{display:grid;gap:2px;margin-top:12px;background:#94a3b8;padding:4px;width:max-content;max-width:calc(100vw - 40px);max-height:calc(100vh - 170px)}.cell{border:none;background:#cbd5e1;font-weight:700;cursor:pointer}
+body{font-family:Arial;background:#f1f5f9;margin:0;padding:20px;min-height:100dvh;box-sizing:border-box;display:flex;flex-direction:column}
+h1{margin-top:0}
+.top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#board{display:grid;gap:2px;margin-top:12px;background:#94a3b8;padding:4px;width:max-content;max-width:calc(100vw - 40px);max-height:calc(100dvh - 170px)}
+.cell{border:none;background:#cbd5e1;font-weight:700;cursor:pointer}
 .cell.open{background:#e2e8f0}.cell.mine{background:#ef4444;color:#fff}.cell.flag{background:#f59e0b;color:#fff}
+dialog{border:none;border-radius:10px;padding:16px 18px;max-width:320px;box-shadow:0 10px 30px rgba(0,0,0,.2)}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+dialog::backdrop{background:rgba(0,0,0,.35)}
 </style></head><body>
 <h1>マインスイーパー</h1>
 <div class="top">
@@ -14,6 +20,13 @@ body{font-family:Arial;background:#f1f5f9;margin:0;padding:20px}h1{margin-top:0}
 <span id="status">準備完了</span>
 </div>
 <div id="board"></div>
+<dialog id="confirmDialog">
+  <p id="confirmMessage"></p>
+  <div class="dialog-actions">
+    <button id="confirmCancel" type="button">キャンセル</button>
+    <button id="confirmOk" type="button">実行する</button>
+  </div>
+</dialog>
 <script>
 let rows,cols,mines,grid=[],first=true,flags=0,opened=0,timer=0,tid=null,gameOver=false;
 const board=document.getElementById('board');
@@ -22,6 +35,10 @@ const newGameBtn=document.getElementById('newGameBtn');
 const remainEl=document.getElementById('remain');
 const timeEl=document.getElementById('time');
 const statusEl=document.getElementById('status');
+const confirmDialogEl=document.getElementById('confirmDialog');
+const confirmMessageEl=document.getElementById('confirmMessage');
+const confirmCancelEl=document.getElementById('confirmCancel');
+const confirmOkEl=document.getElementById('confirmOk');
 let cellSize=24;
 
 function updateCellSize(){
@@ -29,9 +46,22 @@ function updateCellSize(){
   const maxBoardHeight=window.innerHeight-170-8;
   const sizeByWidth=Math.floor((maxBoardWidth-(cols-1)*2)/cols);
   const sizeByHeight=Math.floor((maxBoardHeight-(rows-1)*2)/rows);
-  cellSize=Math.max(16,Math.min(36,sizeByWidth,sizeByHeight));
+  cellSize=Math.max(16,Math.min(sizeByWidth,sizeByHeight));
   board.style.gridTemplateColumns=`repeat(${cols},${cellSize}px)`;
   for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(grid[r][c].el){grid[r][c].el.style.width=`${cellSize}px`;grid[r][c].el.style.height=`${cellSize}px`;}
+}
+
+function showConfirmDialog(message){
+  if(typeof confirmDialogEl.showModal!=='function')return Promise.resolve(window.confirm(message));
+  confirmMessageEl.textContent=message;
+  confirmDialogEl.showModal();
+  return new Promise((resolve)=>{
+    const onCancel=()=>{cleanup();confirmDialogEl.close();resolve(false);};
+    const onOk=()=>{cleanup();confirmDialogEl.close();resolve(true);};
+    const cleanup=()=>{confirmCancelEl.removeEventListener('click',onCancel);confirmOkEl.removeEventListener('click',onOk);};
+    confirmCancelEl.addEventListener('click',onCancel);
+    confirmOkEl.addEventListener('click',onOk);
+  });
 }
 
 function startTimer(){clearInterval(tid);tid=setInterval(()=>{if(!gameOver){timer++;timeEl.textContent=timer;}},1000);}
@@ -50,8 +80,8 @@ function revealAroundNumber(r,c){
   }
 }
 function reveal(r,c){const cell=grid[r][c];if(gameOver)return;if(cell.open){revealAroundNumber(r,c);return;}if(cell.flag)return;if(first){placeMines(r,c);first=false;startTimer();}
-cell.open=true;opened++;const el=cell.el;el.classList.add('open');el.disabled=true;if(cell.mine){el.textContent='💣';el.classList.add('mine');lose();return;}
-if(cell.count)el.textContent=cell.count;else{const q=[[r,c]];while(q.length){const [cr,cc]=q.shift();for(const [nr,nc] of neighbors(cr,cc)){const n=grid[nr][nc];if(!n.open&&!n.flag&&!n.mine){n.open=true;opened++;n.el.classList.add('open');n.el.disabled=true;if(n.count)n.el.textContent=n.count;else q.push([nr,nc]);}}}}
+cell.open=true;opened++;const el=cell.el;el.classList.add('open');if(cell.mine){el.textContent='💣';el.classList.add('mine');lose();return;}
+if(cell.count)el.textContent=cell.count;else{const q=[[r,c]];while(q.length){const [cr,cc]=q.shift();for(const [nr,nc] of neighbors(cr,cc)){const n=grid[nr][nc];if(!n.open&&!n.flag&&!n.mine){n.open=true;opened++;n.el.classList.add('open');if(n.count)n.el.textContent=n.count;else q.push([nr,nc]);}}}}
 checkWin();}
 function toggleFlag(e,r,c){e.preventDefault();const cell=grid[r][c];if(cell.open||gameOver)return;cell.flag=!cell.flag;cell.el.classList.toggle('flag',cell.flag);cell.el.textContent=cell.flag?'🚩':'';flags+=cell.flag?1:-1;remainEl.textContent=mines-flags;}
 function lose(){gameOver=true;statusEl.textContent='ゲームオーバー';clearInterval(tid);for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(grid[r][c].mine&&!grid[r][c].open){grid[r][c].el.textContent='💣';grid[r][c].el.classList.add('mine');}}
@@ -60,7 +90,7 @@ function startNewGame(){[rows,cols,mines]=difficultyEl.value.split(',').map(Numb
 board.innerHTML='';first=true;flags=0;opened=0;timer=0;gameOver=false;timeEl.textContent='0';remainEl.textContent=mines;statusEl.textContent='進行中';clearInterval(tid);
 for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const b=document.createElement('button');b.className='cell';b.onclick=()=>reveal(r,c);b.oncontextmenu=(e)=>toggleFlag(e,r,c);grid[r][c].el=b;board.appendChild(b);} 
 updateCellSize();}
-newGameBtn.onclick=()=>{if(confirm('現在のゲームをリセットしますか？'))startNewGame();};
+newGameBtn.onclick=async ()=>{if(await showConfirmDialog('現在のゲームをリセットしますか？'))startNewGame();};
 difficultyEl.onchange=startNewGame;
 window.addEventListener('resize',updateCellSize);
 startNewGame();
