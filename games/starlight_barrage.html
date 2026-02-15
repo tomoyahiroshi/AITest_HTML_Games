@@ -756,12 +756,11 @@
         state.phaseFrame++;
 
         if (state.phase === PHASE_MID_A) {
-          const requiredDefeat = Math.ceil(state.phaseEnemySpawned * 0.9);
           if (state.phaseFrame === 20 || state.phaseFrame === 340) spawnWaveA();
           if (state.phaseFrame === 180 || state.phaseFrame === 500) spawnWaveAAlt();
           if (state.phaseFrame === 100 || state.phaseFrame === 420) spawnWaveAFormationSweep();
           if (state.phaseFrame === 260 || state.phaseFrame === 580) spawnWaveAFormationDrop();
-          if (state.phaseFrame > 680 && state.midBossSpawnTimer < 0 && state.phaseEnemyDefeated >= requiredDefeat && state.phaseEnemySpawned > 0) {
+          if (state.phaseFrame > 680 && state.midBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
             state.midBossSpawnTimer = 75;
           }
           if (state.midBossSpawnTimer >= 0) {
@@ -776,10 +775,9 @@
             changePhase(PHASE_MID_B);
           }
         } else if (state.phase === PHASE_MID_B) {
-          const requiredDefeat = Math.ceil(state.phaseEnemySpawned * 0.9);
           if (state.phaseFrame === 20 || state.phaseFrame === 200) spawnWaveB();
           if (state.phaseFrame === 380 || state.phaseFrame === 560) spawnWaveC();
-          if (state.phaseFrame > 880 && state.stageBossSpawnTimer < 0 && state.phaseEnemyDefeated >= requiredDefeat && state.phaseEnemySpawned > 0) {
+          if (state.phaseFrame > 880 && state.stageBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
             state.stageBossSpawnTimer = 90;
           }
           if (state.stageBossSpawnTimer >= 0) {
