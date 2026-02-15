@@ -321,6 +321,33 @@
       };
     }
 
+    function findAutoMoveDestination(sourceType, sourceIndex, startPos) {
+      const sourcePile = getPileRef(state, sourceType, sourceIndex);
+      if (!sourcePile || startPos !== sourcePile.length - 1) return null;
+
+      const cardId = sourcePile[startPos];
+      if (!cardId) return null;
+
+      if (sourceType === "tableau" || sourceType === "waste") {
+        for (let i = 0; i < FOUNDATION_COUNT; i += 1) {
+          if (canMoveToFoundation(cardId, state.foundation[i], state.cardsById)) {
+            return { type: "foundation", index: i };
+          }
+        }
+      }
+
+      if (sourceType === "foundation") {
+        const movingStack = [cardId];
+        for (let i = 0; i < TABLEAU_COUNT; i += 1) {
+          if (canMoveToTableau(movingStack, state.tableau[i], state.cardsById)) {
+            return { type: "tableau", index: i };
+          }
+        }
+      }
+
+      return null;
+    }
+
     function tryMoveTo(destType, destIndex) {
       if (!selection || state.status !== "PLAYING") return;
       const src = selection.source;
@@ -345,6 +372,23 @@
       if (state.status !== "PLAYING") return;
       if (!selection) {
         if (!selectableCard(type, index, cardPos)) return;
+
+        const autoDest = findAutoMoveDestination(type, index, cardPos);
+        if (autoDest) {
+          const next = applyMove(state, {
+            type: "pileMove",
+            source: { type, index },
+            startPos: cardPos,
+            dest: autoDest,
+          });
+          if (next !== state) {
+            state = next;
+            setMessage("");
+            render();
+            return;
+          }
+        }
+
         selection = buildSelection(type, index, cardPos);
         setMessage("");
         render();
