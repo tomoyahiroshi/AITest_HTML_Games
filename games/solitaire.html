@@ -42,10 +42,14 @@
     }
     .pile.tableau { min-height: 420px; }
     .pile.tableau .card,
-    .pile.stock .card {
+    .pile.stock .card,
+    .pile.foundation .card {
       position: absolute;
       left: 3px;
       margin-top: 0;
+    }
+    .pile.foundation .card {
+      top: 3px;
     }
     .pile.waste {
       width: calc(var(--card-w) + 112px);
@@ -515,6 +519,7 @@
 
     function renderPile(pileEl, pile, type, index, offset = 0) {
       pileEl.innerHTML = "";
+      pileEl.classList.toggle("foundation", type === "foundation");
       pileEl.classList.toggle("placeholder", pile.length === 0);
       if (type === "tableau") {
         pileEl.dataset.label = pile.length ? "" : "K";
