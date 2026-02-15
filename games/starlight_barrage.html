@@ -164,7 +164,9 @@
       }
 
       function scaledBossHp(baseHp) {
-        return Math.max(20, Math.floor(baseHp * loopIntensity(0.1)));
+        const baseScaledHp = baseHp * loopIntensity(0.1);
+        const lowLoopBoost = Math.max(1, 5 - (state.loop - 1) * 1.5);
+        return Math.max(20, Math.floor(baseScaledHp * lowLoopBoost));
       }
 
       function scaledBulletCount(baseCount) {
