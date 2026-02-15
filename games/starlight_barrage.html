@@ -137,6 +137,22 @@
         return baseRate * (1 + perLoop * l);
       }
 
+      function loopIntensity(step = 0.1) {
+        return 0.1 + Math.max(0, state.loop - 1) * step;
+      }
+
+      function scaledBossHp(baseHp) {
+        return Math.max(20, Math.floor(baseHp * loopIntensity(0.1)));
+      }
+
+      function scaledBulletCount(baseCount) {
+        return Math.max(1, Math.floor(baseCount * loopIntensity(0.1)));
+      }
+
+      function scaledShotInterval(baseInterval) {
+        return Math.max(8, Math.floor(baseInterval / loopIntensity(0.1)));
+      }
+
       function isPressed(code) {
         return !!keys[code] && !prevKeys[code];
       }
@@ -199,23 +215,20 @@
       }
 
       function spawnWaveA() {
-        const easyStart = state.loop === 1;
+        const easyStart = state.loop <= 2;
         for (let i = 0; i < 6; i++) {
           const fromLeft = i % 2 === 0;
           spawnEnemy({
-            type: 'small',
+            type: 'striker',
             x: fromLeft ? -30 : W + 30,
             y: 80 + i * 40,
-            hp: Math.floor(diffRate(3, 0.05)),
+            hp: Math.floor(diffRate(4, 0.05)),
             value: 100,
             update(e) {
               e.t++;
-              e.x += fromLeft ? 2.1 : -2.1;
-              e.y += Math.sin(e.t / 24) * 1.15;
-              const shotInterval = easyStart ? 72 : 58;
-              if (e.t % Math.max(38, Math.floor(shotInterval / diffRate(1, 0.03))) === 0) {
-                aimedShot(e.x, e.y, diffRate(1.8, 0.03));
-              }
+              const angle = Math.atan2(player.y - e.y, player.x - e.x);
+              e.x += Math.cos(angle) * 1.05;
+              e.y += Math.sin(angle) * 1.05;
             },
             draw(e) {
               drawAscii([' v ', '<x>'], e.x, e.y, '#b8ffcf', 14);
@@ -223,23 +236,23 @@
           });
         }
 
-        for (let i = 0; i < 3; i++) {
+        for (let i = 0; i < 2; i++) {
           spawnEnemy({
-            type: 'medium',
-            x: 80 + i * 160,
+            type: 'turret',
+            x: 120 + i * 240,
             y: -40 - i * 40,
-            hp: Math.floor(diffRate(14, 0.05)),
-            value: 500,
+            hp: Math.floor(diffRate(24, 0.05)),
+            value: 700,
             update(e) {
               e.t++;
-              if (e.t < 50) e.y += 1.3;
-              else e.y += Math.sin(e.t / 40) * 0.2;
-              const shotInterval = easyStart ? 74 : 62;
-              if (e.t % Math.max(45, Math.floor(shotInterval / diffRate(1, 0.03))) === 0) {
+              if (e.t < 60) e.y += 1.1;
+              else e.y += Math.sin(e.t / 45) * 0.15;
+              const shotInterval = scaledShotInterval(easyStart ? 120 : 95);
+              if (e.t % shotInterval === 0) {
                 const spreadCount = easyStart ? 1 : 2;
-                for (let n = -spreadCount; n <= spreadCount; n++) aimedShot(e.x, e.y + 10, diffRate(1.4, 0.03), n * 0.16);
+                for (let n = -spreadCount; n <= spreadCount; n++) aimedShot(e.x, e.y + 10, diffRate(1.25, 0.03), n * 0.17);
               }
-              if (e.t > 220) e.alive = false;
+              if (e.t > 300) e.alive = false;
             },
             draw(e) {
               drawAscii(['[+]', '/|\\'], e.x, e.y, '#84d3ff', 15);
@@ -250,22 +263,47 @@
 
       function spawnWaveB() {
         for (let i = 0; i < 10; i++) {
+          const fromLeft = i < 5;
+          const row = i % 5;
           spawnEnemy({
-            type: 'small',
-            x: 30 + (i % 5) * 100,
-            y: -20 - Math.floor(i / 5) * 80,
-            hp: Math.floor(diffRate(4, 0.05)),
-            value: 100,
+            type: 'formation',
+            x: fromLeft ? -30 - row * 24 : W + 30 + row * 24,
+            y: 110 + row * 45,
+            hp: Math.floor(diffRate(5, 0.05)),
+            value: 150,
             update(e) {
               e.t++;
-              e.y += 1.8;
-              e.x += Math.sin((e.t + i * 15) / 22) * 1.5;
-              if (e.t % Math.max(40, Math.floor(76 / diffRate(1, 0.03))) === 0) {
-                ringBullets(e.x, e.y, 6, diffRate(1.2, 0.03), e.t * 0.06);
+              e.x += fromLeft ? 2.6 : -2.6;
+              e.y += Math.sin((e.t + row * 16) / 26) * 0.5;
+              if (e.t % scaledShotInterval(110) === 0) {
+                aimedShot(e.x, e.y, diffRate(1.45, 0.03));
               }
             },
             draw(e) {
               drawAscii([' + ', '\\v/'], e.x, e.y, '#ffb0df', 13);
+            }
+          });
+        }
+      }
+
+      function spawnWaveC() {
+        for (let i = 0; i < 10; i++) {
+          spawnEnemy({
+            type: 'formationAlt',
+            x: 30 + (i % 5) * 100,
+            y: -20 - Math.floor(i / 5) * 80,
+            hp: Math.floor(diffRate(4, 0.05)),
+            value: 180,
+            update(e) {
+              e.t++;
+              e.y += 1.9;
+              e.x += Math.sin((e.t + i * 20) / 18) * 1.8;
+              if (e.t % scaledShotInterval(95) === 0) {
+                ringBullets(e.x, e.y, scaledBulletCount(6), diffRate(1.2, 0.03), e.t * 0.06);
+              }
+            },
+            draw(e) {
+              drawAscii(['{+}', '/v\\'], e.x, e.y, '#ffa0c7', 13);
             }
           });
         }
@@ -276,8 +314,8 @@
           type: 'midBoss',
           x: W / 2,
           y: 100,
-          hp: Math.floor(diffRate(320, 0.08)),
-          maxHp: Math.floor(diffRate(320, 0.08)),
+          hp: scaledBossHp(Math.floor(diffRate(320, 0.08))),
+          maxHp: scaledBossHp(Math.floor(diffRate(320, 0.08))),
           value: 3000,
           update(e) {
             e.t++;
@@ -285,19 +323,19 @@
             const rage = e.hp < e.maxHp * 0.5;
             const speedMul = diffRate(1.7, 0.03) * (rage ? 1.22 : 1);
 
-            if (e.t % Math.max(24, Math.floor((rage ? 38 : 45) / diffRate(1, 0.03))) === 0) {
+            if (e.t % scaledShotInterval(rage ? 45 : 54) === 0) {
               aimedShot(e.x, e.y + 8, speedMul, 0);
               aimedShot(e.x, e.y + 8, speedMul, 0.14);
               aimedShot(e.x, e.y + 8, speedMul, -0.14);
             }
-            if (e.t % Math.max(30, Math.floor((rage ? 45 : 56) / diffRate(1, 0.03))) === 0) {
+            if (e.t % scaledShotInterval(rage ? 55 : 68) === 0) {
               for (let i = -2; i <= 2; i++) {
                 const a = -Math.PI / 2 + i * 0.22 + Math.sin(e.t / 30) * 0.18;
                 shootEnemyBullet(e.x, e.y + 12, Math.cos(a) * speedMul, Math.sin(a) * speedMul, 4, '#ff79a7');
               }
             }
-            if (e.t % Math.max(8, Math.floor((rage ? 11 : 14) / diffRate(1, 0.03))) === 0) {
-              ringBullets(e.x, e.y + 6, rage ? 12 : 9, diffRate(0.9, 0.03), e.t * 0.08, '#b388ff');
+            if (e.t % scaledShotInterval(rage ? 18 : 22) === 0) {
+              ringBullets(e.x, e.y + 6, scaledBulletCount(rage ? 12 : 9), diffRate(0.9, 0.03), e.t * 0.08, '#b388ff');
             }
           },
           draw(e) {
@@ -312,8 +350,8 @@
           type: 'stageBoss',
           x: W / 2,
           y: 110,
-          hp: Math.floor(diffRate(680, 0.08)),
-          maxHp: Math.floor(diffRate(680, 0.08)),
+          hp: scaledBossHp(Math.floor(diffRate(680, 0.08))),
+          maxHp: scaledBossHp(Math.floor(diffRate(680, 0.08))),
           value: 10000,
           update(e) {
             e.t++;
@@ -323,25 +361,25 @@
             const speed = diffRate(1.45, 0.03);
 
             if (phase === 1) {
-              if (e.t % Math.max(20, Math.floor(38 / diffRate(1, 0.03))) === 0) {
-                ringBullets(e.x, e.y, 18, speed, e.t * 0.04, '#73e6ff');
+              if (e.t % scaledShotInterval(46) === 0) {
+                ringBullets(e.x, e.y, scaledBulletCount(18), speed, e.t * 0.04, '#73e6ff');
                 aimedShot(e.x, e.y, speed + 0.5);
               }
             } else if (phase === 2) {
-              if (e.t % Math.max(5, Math.floor(8 / diffRate(1, 0.03))) === 0) {
+              if (e.t % scaledShotInterval(16) === 0) {
                 const lane = ((Math.floor(e.t / 42) % 10) - 5) * 28;
                 shootEnemyBullet(W / 2 + lane, 0, 0, speed + 1.2, 5, '#9af079');
                 shootEnemyBullet(W / 2 - lane, 0, 0, speed + 1.2, 5, '#9af079');
               }
-              if (e.t % 26 === 0) ringBullets(e.x, e.y + 6, 10, speed, e.t * 0.15, '#ffaa6a');
+              if (e.t % scaledShotInterval(34) === 0) ringBullets(e.x, e.y + 6, scaledBulletCount(10), speed, e.t * 0.15, '#ffaa6a');
             } else {
-              if (e.t % Math.max(7, Math.floor(11 / diffRate(1, 0.03))) === 0) {
+              if (e.t % scaledShotInterval(20) === 0) {
                 for (let i = 0; i < 3; i++) {
                   const shift = (e.t * 0.12) + i * 0.8;
-                  ringBullets(e.x + Math.sin(shift) * 90, e.y + Math.cos(shift * 0.8) * 12, 10, speed + 0.5, shift, '#ff6cd6');
+                  ringBullets(e.x + Math.sin(shift) * 90, e.y + Math.cos(shift * 0.8) * 12, scaledBulletCount(10), speed + 0.5, shift, '#ff6cd6');
                 }
               }
-              if (e.t % 20 === 0) {
+              if (e.t % scaledShotInterval(28) === 0) {
                 for (let i = -3; i <= 3; i++) aimedShot(e.x, e.y, speed + 1, i * 0.09);
               }
             }
@@ -401,8 +439,8 @@
         state.phaseFrame++;
 
         if (state.phase === PHASE_MID_A) {
-          if (state.phaseFrame === 20 || state.phaseFrame === 190) spawnWaveA();
-          if (state.phaseFrame > 420 && state.enemies.filter((e) => e.alive).length === 0) {
+          if (state.phaseFrame === 20 || state.phaseFrame === 220 || state.phaseFrame === 430) spawnWaveA();
+          if (state.phaseFrame > 680 && state.enemies.filter((e) => e.alive).length === 0) {
             changePhase(PHASE_MID_BOSS);
             spawnMidBoss();
           }
@@ -411,8 +449,9 @@
             changePhase(PHASE_MID_B);
           }
         } else if (state.phase === PHASE_MID_B) {
-          if (state.phaseFrame === 20 || state.phaseFrame === 180) spawnWaveB();
-          if (state.phaseFrame > 400 && state.enemies.filter((e) => e.alive).length === 0) {
+          if (state.phaseFrame === 20 || state.phaseFrame === 200) spawnWaveB();
+          if (state.phaseFrame === 380 || state.phaseFrame === 560) spawnWaveC();
+          if (state.phaseFrame > 880 && state.enemies.filter((e) => e.alive).length === 0) {
             changePhase(PHASE_STAGE_BOSS);
             spawnStageBoss();
           }
@@ -456,7 +495,7 @@
           if (!b.alive) continue;
           for (const e of state.enemies) {
             if (!e.alive) continue;
-            const hitR = e.type.includes('Boss') ? 40 : e.type === 'medium' ? 18 : 14;
+            const hitR = e.type.includes('Boss') ? 40 : e.type === 'turret' ? 20 : 14;
             if ((b.x - e.x) ** 2 + (b.y - e.y) ** 2 < hitR * hitR) {
               b.alive = false;
               e.hp -= 1;
