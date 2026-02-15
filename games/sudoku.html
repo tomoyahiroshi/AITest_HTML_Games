@@ -118,7 +118,13 @@
       }
       statusEl.textContent = ok&&complete ? 'クリア！' : '誤りまたは未入力があります';
     }
-    function reset(){ puzzle=initial.map(r=>[...r]); render(); statusEl.textContent='進行中'; }
+    function reset(){
+      const shouldReset = window.confirm('現在の入力内容をリセットします。よろしいですか？');
+      if(!shouldReset) return;
+      puzzle=initial.map(r=>[...r]);
+      render();
+      statusEl.textContent='進行中';
+    }
     function newGame(){ makePuzzle(Number(difficultyEl.value)); render(); statusEl.textContent='進行中'; }
     document.getElementById('newGame').onclick=newGame;
     document.getElementById('check').onclick=check;
