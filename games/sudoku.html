@@ -9,6 +9,7 @@
     .app{background:#fff;padding:20px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.1);max-width:560px;width:100%}
     h1{margin:0 0 12px}
     .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    #check{margin-left:auto}
     button,select{padding:8px 10px}
     .grid{display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);gap:0;border:2px solid #222;max-width:540px;width:100%;aspect-ratio:1}
     .cell{width:100%;height:100%;box-sizing:border-box;margin:0;padding:0;border:1px solid #ccc;text-align:center;font-size:20px}
@@ -28,8 +29,8 @@
         <option value="55">Hard</option>
       </select>
       <button id="newGame">新規ゲーム</button>
-      <button id="check">答え合わせ</button>
       <button id="reset">リセット</button>
+      <button id="check">答え合わせ</button>
     </div>
     <div id="grid" class="grid"></div>
     <div id="status" class="status">進行中</div>
