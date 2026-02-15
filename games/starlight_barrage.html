@@ -407,6 +407,30 @@
         spawnSniperPair();
       }
 
+      function spawnWaveAColumnRush() {
+        const laneXs = [90, 170, 250, 330, 410];
+        for (let i = 0; i < laneXs.length; i++) {
+          spawnEnemy({
+            type: 'midAColumnRush',
+            x: laneXs[i],
+            y: -28 - i * 26,
+            hp: 1,
+            value: 120,
+            update(e) {
+              e.t++;
+              e.y += 2.35;
+              e.x += Math.sin((e.t + i * 16) / 22) * 0.35;
+              if (e.t % scaledShotInterval(112) === 0) {
+                aimedShot(e.x, e.y, diffRate(1.22, 0.03));
+              }
+            },
+            draw(e) {
+              drawAscii(['[|]', ' v '], e.x, e.y, '#ffd2a1', 12);
+            }
+          });
+        }
+      }
+
       function spawnWaveAAlt() {
         spawnDiverLine();
         for (let i = 0; i < 4; i++) {
@@ -893,6 +917,7 @@
         state.phaseFrame++;
 
         if (state.phase === PHASE_MID_A) {
+          if (state.phaseFrame === midABFrame(8)) spawnWaveAColumnRush();
           if (state.phaseFrame === midABFrame(20) || state.phaseFrame === midABFrame(400)) spawnWaveB();
           if (state.phaseFrame === midABFrame(140) || state.phaseFrame === midABFrame(520)) spawnWaveC();
           if (state.phaseFrame === midABFrame(640) || state.phaseFrame === midABFrame(760)) spawnWaveBMix();
