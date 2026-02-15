@@ -6,8 +6,8 @@
   <title>ソリティア（Klondike / Draw 1）</title>
   <style>
     :root {
-      --card-w: 88px;
-      --card-h: 124px;
+      --card-w: clamp(64px, 8.2vw, 88px);
+      --card-h: clamp(92px, 11.5vw, 124px);
       --bg: #14532d;
       --accent: #f59e0b;
       --line: rgba(255,255,255,0.35);
@@ -18,9 +18,12 @@
       background: var(--bg);
       color: #fff;
       font-family: "Segoe UI", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
-      min-width: 1024px;
     }
-    main { padding: 16px; }
+    main {
+      padding: clamp(10px, 2vw, 16px);
+      width: min(100%, 1120px);
+      margin: 0 auto;
+    }
     h1 { margin: 0 0 12px; font-size: 24px; }
     .toolbar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
     button { border: 0; border-radius: 6px; padding: 9px 14px; font-weight: 700; cursor: pointer; }
@@ -31,8 +34,21 @@
     .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
     dialog::backdrop{background:rgba(0,0,0,.45)}
 
-    .row { display: flex; gap: 12px; align-items: flex-start; }
-    .spacer { flex: 1; }
+    .row {
+      display: flex;
+      gap: clamp(6px, 1.2vw, 12px);
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+    .top-row {
+      justify-content: space-between;
+    }
+    .left-piles,
+    .foundation-row {
+      display: flex;
+      gap: clamp(6px, 1.2vw, 12px);
+      align-items: flex-start;
+    }
 
     .pile {
       width: var(--card-w);
@@ -55,7 +71,7 @@
       top: 3px;
     }
     .pile.waste {
-      width: calc(var(--card-w) + 112px);
+      width: calc(var(--card-w) + clamp(66px, 8vw, 112px));
     }
     .pile.waste .card {
       position: absolute;
@@ -108,14 +124,14 @@
       top: 6px;
       left: 7px;
       font-weight: 800;
-      font-size: 18px;
+      font-size: clamp(14px, 2vw, 18px);
       line-height: 1;
     }
     .suit {
       position: absolute;
       top: 27px;
       left: 8px;
-      font-size: 18px;
+      font-size: clamp(14px, 2vw, 18px);
     }
     .card.selected { outline: 3px solid var(--accent); }
     .card.dragging { opacity: .72; }
@@ -130,14 +146,17 @@
       <span id="message" class="message" aria-live="polite"></span>
     </div>
 
-    <div class="row" style="margin-bottom:14px;">
-      <div id="stock" class="pile placeholder stock" data-label="STOCK"></div>
-      <div id="waste" class="pile placeholder waste" data-label="WASTE"></div>
-      <div class="spacer"></div>
-      <div id="f0" class="pile placeholder" data-label="A♠"></div>
-      <div id="f1" class="pile placeholder" data-label="A♥"></div>
-      <div id="f2" class="pile placeholder" data-label="A♦"></div>
-      <div id="f3" class="pile placeholder" data-label="A♣"></div>
+    <div class="row top-row" style="margin-bottom:14px;">
+      <div class="left-piles">
+        <div id="stock" class="pile placeholder stock" data-label="STOCK"></div>
+        <div id="waste" class="pile placeholder waste" data-label="WASTE"></div>
+      </div>
+      <div class="foundation-row">
+        <div id="f0" class="pile placeholder" data-label="A♠"></div>
+        <div id="f1" class="pile placeholder" data-label="A♥"></div>
+        <div id="f2" class="pile placeholder" data-label="A♦"></div>
+        <div id="f3" class="pile placeholder" data-label="A♣"></div>
+      </div>
     </div>
 
     <div id="tableauRow" class="row"></div>
@@ -596,10 +615,12 @@
       }
 
       if (type === "tableau") {
+        const cardHeight = Number(getComputedStyle(document.documentElement).getPropertyValue("--card-h").replace("px", "")) || 124;
+        const minimumTableauHeight = Math.max(260, Math.round(cardHeight * 3.4));
         const tableauHeight = pile.length
-          ? (Number(getComputedStyle(document.documentElement).getPropertyValue("--card-h").replace("px", "")) || 124) + (offset * (pile.length - 1))
-          : 420;
-        pileEl.style.height = `${Math.max(420, tableauHeight)}px`;
+          ? cardHeight + (offset * (pile.length - 1))
+          : minimumTableauHeight;
+        pileEl.style.height = `${Math.max(minimumTableauHeight, tableauHeight)}px`;
       } else {
         pileEl.style.height = "";
       }
@@ -642,12 +663,18 @@
       verifyIntegrity(state);
       updateStatus();
 
+      const cardWidth = Number(getComputedStyle(document.documentElement).getPropertyValue("--card-w").replace("px", "")) || 88;
+      const cardHeight = Number(getComputedStyle(document.documentElement).getPropertyValue("--card-h").replace("px", "")) || 124;
+      const stockOffset = Math.max(2, Math.round(cardWidth * 0.03));
+      const wasteOffset = Math.max(16, Math.round(cardWidth * 0.32));
+      const tableauOffset = Math.max(16, Math.round(cardHeight * 0.19));
+
       if (state.status === "CLEAR") {
         promptRestartAfterGameClear();
       }
 
       const visibleStock = state.stock.length ? state.stock.slice(-3) : [];
-      renderPile(stockEl, visibleStock, "stock", 0, 3);
+      renderPile(stockEl, visibleStock, "stock", 0, stockOffset);
       stockEl.onclick = handleStockClick;
       stockEl.classList.toggle("placeholder", state.stock.length === 0);
 
@@ -657,7 +684,7 @@
           cardId,
           cardPos: state.waste.length - cards.length + i,
         }));
-      renderPile(wasteEl, visibleWaste, "waste", 0, 28);
+      renderPile(wasteEl, visibleWaste, "waste", 0, wasteOffset);
 
       foundationEls.forEach((el, i) => renderPile(el, state.foundation[i], "foundation", i));
 
@@ -666,7 +693,7 @@
         const pileEl = document.createElement("div");
         pileEl.className = "pile tableau placeholder";
         pileEl.dataset.label = "K";
-        renderPile(pileEl, state.tableau[i], "tableau", i, 24);
+        renderPile(pileEl, state.tableau[i], "tableau", i, tableauOffset);
         tableauRowEl.appendChild(pileEl);
       }
     }
@@ -684,6 +711,7 @@
     }
 
     document.getElementById("newBtn").addEventListener("click", () => startNewGame(true));
+    window.addEventListener("resize", () => render());
 
     startNewGame(false);
   </script>
