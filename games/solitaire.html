@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ソリティア</title>
+<style>
+body{font-family:Arial;background:#14532d;color:#fff;margin:0;padding:16px}.row{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+.pile{width:86px;min-height:120px;border:2px dashed rgba(255,255,255,.35);border-radius:8px;padding:4px}.tableau{min-height:360px}
+.card{width:78px;height:110px;background:#fff;color:#111;border-radius:6px;border:1px solid #333;display:flex;align-items:center;justify-content:center;margin-top:6px;cursor:pointer;font-weight:700}
+.red{color:#dc2626}.back{background:#1e3a8a;color:#fff}.selected{outline:3px solid #f59e0b}button{padding:8px}h1{margin:0 0 10px}
+</style></head><body>
+<h1>ソリティア（Klondike）</h1>
+<button id="newBtn">新規ゲーム</button> <span id="status"></span>
+<div class="row" style="margin-top:10px">
+  <div id="stock" class="pile"></div><div id="waste" class="pile"></div>
+  <div id="f0" class="pile"></div><div id="f1" class="pile"></div><div id="f2" class="pile"></div><div id="f3" class="pile"></div>
+</div>
+<div id="tableau" class="row" style="margin-top:14px"></div>
+<script>
+const suits=['♠','♥','♦','♣']; const ranks=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+let stock=[],waste=[],found=[[],[],[],[]],tab=[[],[],[],[],[],[],[]],sel=null;
+function color(s){return s==='♥'||s==='♦'?'red':'black'}
+function cardStr(c){return ranks[c.r]+c.s}
+function makeDeck(){const d=[];for(let s of suits)for(let r=0;r<13;r++)d.push({s,r,up:false});for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}return d;}
+function deal(){const d=makeDeck();tab=[[],[],[],[],[],[],[]];for(let i=0;i<7;i++)for(let j=0;j<=i;j++){const c=d.pop();c.up=(j===i);tab[i].push(c);}stock=d;waste=[];found=[[],[],[],[]];sel=null;status.textContent='';render();}
+function renderPile(el,cards,offset=0,table=false,pileType='',idx=0){el.innerHTML='';cards.forEach((c,i)=>{const div=document.createElement('div');div.className='card'+(c.up?'':' back')+(c.up&&color(c.s)==='red'?' red':'');if(c.up)div.textContent=cardStr(c);
+if(offset)div.style.marginTop=(i===0?0:offset)+'px';
+if(sel&&sel.type===pileType&&sel.idx===idx&&sel.pos===i)div.classList.add('selected');
+div.onclick=(e)=>onCardClick(pileType,idx,i,e);el.appendChild(div);});if(!cards.length&&table){el.onclick=()=>onEmptyTableau(idx);} }
+function topWaste(){return waste[waste.length-1]}
+function canToFoundation(c,f){if(!f.length)return c.r===0;const t=f[f.length-1];return c.s===t.s&&c.r===t.r+1;}
+function canToTableau(c,dst){if(!dst.length)return c.r===12;const t=dst[dst.length-1];return color(c.s)!==color(t.s)&&c.r===t.r-1;}
+function moveCard(srcType,srcIdx,pos,dstType,dstIdx){
+  const src = srcType==='waste'?waste:srcType==='found'?found[srcIdx]:tab[srcIdx];
+  const moving = srcType==='tab'?src.slice(pos):[src[src.length-1]];
+  const first=moving[0];
+  if(dstType==='found'){ if(moving.length!==1||!canToFoundation(first,found[dstIdx])) return false; found[dstIdx].push(moving[0]); }
+  else if(dstType==='tab'){ if(!canToTableau(first,tab[dstIdx])) return false; tab[dstIdx].push(...moving); }
+  else return false;
+  if(srcType==='tab'){ src.splice(pos,moving.length); const top=src[src.length-1]; if(top&&!top.up)top.up=true; }
+  else src.pop();
+  checkWin();return true;
+}
+function onCardClick(type,idx,pos){
+  const pile= type==='waste'?waste:type==='found'?found[idx]:tab[idx], c=pile[pos];
+  if(type==='tab'&&!c.up){if(pos===pile.length-1){c.up=true;render();}return;}
+  if(!sel){sel={type,idx,pos};render();return;}
+  if(sel.type===type&&sel.idx===idx&&sel.pos===pos){sel=null;render();return;}
+  const ok=moveCard(sel.type,sel.idx,sel.pos,type,idx); sel=null; render(); if(!ok)status.textContent='その移動はできません'; else status.textContent='';
+}
+function onEmptyTableau(i){if(!sel)return;const ok=moveCard(sel.type,sel.idx,sel.pos,'tab',i);sel=null;render();if(!ok)status.textContent='Kのみ空列へ移動可';else status.textContent='';}
+stock.onclick=()=>{if(!stock.length){while(waste.length){const c=waste.pop();c.up=false;stock.unshift(c);}render();return;}const c=stock.pop();c.up=true;waste.push(c);render();};
+function checkWin(){if(found.every(p=>p.length===13))status.textContent='クリア！';}
+function render(){renderPile(stockEl,stock.length?[{up:false}]:[]);renderPile(wasteEl,waste);for(let i=0;i<4;i++)renderPile(document.getElementById('f'+i),found[i],0,false,'found',i);
+const t=document.getElementById('tableau');t.innerHTML='';for(let i=0;i<7;i++){const p=document.createElement('div');p.className='pile tableau';renderPile(p,tab[i],20,true,'tab',i);t.appendChild(p);} }
+const stockEl=document.getElementById('stock'),wasteEl=document.getElementById('waste');
+newBtn.onclick=deal;deal();
+</script></body></html>

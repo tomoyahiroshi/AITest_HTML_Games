@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>マインスイーパー</title>
+<style>
+body{font-family:Arial;background:#f1f5f9;margin:0;padding:20px}h1{margin-top:0}.top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#board{display:grid;gap:2px;margin-top:12px;background:#94a3b8;padding:4px;width:max-content}.cell{width:24px;height:24px;border:none;background:#cbd5e1;font-weight:700;cursor:pointer}
+.cell.open{background:#e2e8f0}.cell.mine{background:#ef4444;color:#fff}.cell.flag{background:#f59e0b;color:#fff}
+</style></head><body>
+<h1>マインスイーパー</h1>
+<div class="top">
+<select id="difficulty"><option value="9,9,10">Beginner</option><option value="16,16,40">Intermediate</option><option value="16,30,99">Expert</option></select>
+<button id="newGameBtn">新規ゲーム</button>
+<span>残り地雷: <b id="remain">0</b></span>
+<span>時間: <b id="time">0</b>s</span>
+<span id="status">準備完了</span>
+</div>
+<div id="board"></div>
+<script>
+let rows,cols,mines,grid=[],first=true,flags=0,opened=0,timer=0,tid=null,gameOver=false;
+const board=document.getElementById('board');
+function startTimer(){clearInterval(tid);tid=setInterval(()=>{if(!gameOver){timer++;time.textContent=timer;}},1000);}
+function neighbors(r,c){const n=[];for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;let nr=r+dr,nc=c+dc;if(nr>=0&&nr<rows&&nc>=0&&nc<cols)n.push([nr,nc]);}return n;}
+function placeMines(sr,sc){let placed=0;while(placed<mines){let r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);if((r===sr&&c===sc)||grid[r][c].mine)continue;grid[r][c].mine=true;placed++;}
+for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)grid[r][c].count=neighbors(r,c).filter(([nr,nc])=>grid[nr][nc].mine).length;}
+function reveal(r,c){const cell=grid[r][c];if(cell.open||cell.flag||gameOver)return;if(first){placeMines(r,c);first=false;startTimer();}
+cell.open=true;opened++;const el=cell.el;el.classList.add('open');el.disabled=true;if(cell.mine){el.textContent='💣';el.classList.add('mine');lose();return;}
+if(cell.count)el.textContent=cell.count;else{const q=[[r,c]];while(q.length){const [cr,cc]=q.shift();for(const [nr,nc] of neighbors(cr,cc)){const n=grid[nr][nc];if(!n.open&&!n.flag&&!n.mine){n.open=true;opened++;n.el.classList.add('open');n.el.disabled=true;if(n.count)n.el.textContent=n.count;else q.push([nr,nc]);}}}}
+checkWin();}
+function toggleFlag(e,r,c){e.preventDefault();const cell=grid[r][c];if(cell.open||gameOver)return;cell.flag=!cell.flag;cell.el.classList.toggle('flag',cell.flag);cell.el.textContent=cell.flag?'🚩':'';flags+=cell.flag?1:-1;remain.textContent=mines-flags;}
+function lose(){gameOver=true;status.textContent='ゲームオーバー';clearInterval(tid);for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(grid[r][c].mine&&!grid[r][c].open){grid[r][c].el.textContent='💣';grid[r][c].el.classList.add('mine');}}
+function checkWin(){if(opened===rows*cols-mines){gameOver=true;status.textContent='クリア！';clearInterval(tid);}}
+function startNewGame(){[rows,cols,mines]=difficulty.value.split(',').map(Number);grid=Array.from({length:rows},()=>Array.from({length:cols},()=>({mine:false,open:false,flag:false,count:0,el:null})));
+board.style.gridTemplateColumns=`repeat(${cols},24px)`;board.innerHTML='';first=true;flags=0;opened=0;timer=0;gameOver=false;time.textContent='0';remain.textContent=mines;status.textContent='進行中';clearInterval(tid);
+for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const b=document.createElement('button');b.className='cell';b.onclick=()=>reveal(r,c);b.oncontextmenu=(e)=>toggleFlag(e,r,c);grid[r][c].el=b;board.appendChild(b);} }
+document.getElementById('newGameBtn').onclick=startNewGame;difficulty.onchange=startNewGame;startNewGame();
+</script></body></html>
