@@ -126,6 +126,13 @@
         debugInvincible: false
       };
 
+      const ENEMY_HIT_RADIUS = {
+        small: 14,
+        medium: 28,
+        turret: 20,
+        boss: 40
+      };
+
       const titleMenu = ['game Start', 'Debug Start'];
 
       for (let i = 0; i < 90; i++) {
@@ -243,6 +250,7 @@
         for (let i = 0; i < 2; i++) {
           spawnEnemy({
             type: 'sniper',
+            sizeClass: 'medium',
             x: 90 + i * 300,
             y: -50 - i * 35,
             hp: Math.floor(diffRate(20, 0.05)),
@@ -265,7 +273,11 @@
               if (e.t > 360) e.alive = false;
             },
             draw(e) {
-              drawAscii(['[+]', '{|}'], e.x, e.y, '#7dc8ff', 15);
+              drawAscii([
+                ' /====\\ ',
+                '<( <> )>',
+                ' \\_||_/ '
+              ], e.x, e.y, '#7dc8ff', 30);
             }
           });
         }
@@ -682,7 +694,13 @@
           if (!b.alive) continue;
           for (const e of state.enemies) {
             if (!e.alive) continue;
-            const hitR = e.type.includes('Boss') ? 40 : e.type === 'turret' ? 20 : 14;
+            const hitR = e.type.includes('Boss')
+              ? ENEMY_HIT_RADIUS.boss
+              : e.type === 'turret'
+                ? ENEMY_HIT_RADIUS.turret
+                : e.sizeClass === 'medium'
+                  ? ENEMY_HIT_RADIUS.medium
+                  : ENEMY_HIT_RADIUS.small;
             if ((b.x - e.x) ** 2 + (b.y - e.y) ** 2 < hitR * hitR) {
               b.alive = false;
               e.hp -= 1;
