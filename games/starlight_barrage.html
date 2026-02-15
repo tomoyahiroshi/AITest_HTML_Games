@@ -57,13 +57,14 @@
       const PHASE_STAGE_BOSS = 'PHASE_STAGE_BOSS';
       const PHASE_CLEAR_TRANSITION = 'PHASE_CLEAR_TRANSITION';
 
-      const phaseLabel = {
-        [PHASE_MID_A]: 'MID AREA A',
-        [PHASE_MID_BOSS]: 'MID BOSS',
-        [PHASE_MID_B]: 'MID AREA B',
-        [PHASE_STAGE_BOSS]: 'STAGE BOSS',
-        [PHASE_CLEAR_TRANSITION]: 'STAGE CLEAR'
-      };
+      function phaseLabel(phase) {
+        if (phase === PHASE_MID_A) return `LOOP ${state.loop} AREA A`;
+        if (phase === PHASE_MID_BOSS) return 'MID BOSS';
+        if (phase === PHASE_MID_B) return `LOOP ${state.loop} AREA B`;
+        if (phase === PHASE_STAGE_BOSS) return 'STAGE BOSS';
+        if (phase === PHASE_CLEAR_TRANSITION) return 'STAGE CLEAR';
+        return 'UNKNOWN';
+      }
 
       const keys = Object.create(null);
       const prevKeys = Object.create(null);
@@ -112,6 +113,8 @@
         phaseEnemyDefeated: 0,
         midBossSpawnTimer: -1,
         stageBossSpawnTimer: -1,
+        stageBossDeployTimer: -1,
+        stageBossHasSpawned: false,
         playerBullets: [],
         enemyBullets: [],
         enemies: [],
@@ -318,11 +321,11 @@
                 e.x += i === 0 ? -0.3 : 0.3;
               }
 
-              if (e.t % scaledShotInterval(76) === 0) {
-                for (let n = -1; n <= 1; n++) aimedShot(e.x, e.y + 10, diffRate(1.4, 0.03), n * 0.11);
+              if (e.t % scaledShotInterval(56) === 0) {
+                for (let n = -2; n <= 2; n++) aimedShot(e.x, e.y + 10, diffRate(1.55, 0.03), n * 0.1);
               }
-              if (e.t % scaledShotInterval(120) === 0) {
-                ringBullets(e.x, e.y + 12, scaledBulletCount(6), diffRate(0.9, 0.03), e.t * 0.03, '#6ec9ff');
+              if (e.t % scaledShotInterval(96) === 0) {
+                ringBullets(e.x, e.y + 12, scaledBulletCount(8), diffRate(0.95, 0.03), e.t * 0.03, '#6ec9ff');
               }
               if (e.t > 520) e.alive = false;
             },
@@ -533,6 +536,16 @@
               e.t++;
               e.x += fromLeft ? 0.68 : -0.68;
               e.y += Math.sin((e.t + i * 30) / 32) * 0.22;
+              if (e.t % scaledShotInterval(28) === 0) {
+                const sideOffset = fromLeft ? 0.1 : -0.1;
+                aimedShot(e.x, e.y + 4, diffRate(1.45, 0.03), sideOffset);
+                aimedShot(e.x, e.y + 4, diffRate(1.45, 0.03), -sideOffset);
+              }
+              if (e.t % scaledShotInterval(44) === 0) {
+                for (let spread = -2; spread <= 2; spread++) {
+                  aimedShot(e.x, e.y + 8, diffRate(1.6, 0.03), spread * 0.09);
+                }
+              }
               if (e.t % scaledShotInterval(56) === 0) {
                 ringBullets(e.x, e.y, scaledBulletCount(10), diffRate(0.78, 0.02), e.t * 0.05, '#7db7ff');
               }
@@ -552,11 +565,22 @@
         spawnEnemy({
           type: `midBossV${variant + 1}`,
           x: W / 2,
-          y: 100,
+          y: -130,
+          introTargetY: 100,
           hp: scaledBossHp(Math.floor(diffRate(320, 0.08))),
           maxHp: scaledBossHp(Math.floor(diffRate(320, 0.08))),
           value: 3000,
           update(e) {
+            if (!e.entered) {
+              e.t++;
+              const p = Math.min(1, e.t / 65);
+              const eased = 1 - (1 - p) * (1 - p);
+              e.y = -130 + (e.introTargetY + 130) * eased;
+              if (p < 1) return;
+              e.entered = true;
+              e.t = 0;
+              e.y = e.introTargetY;
+            }
             e.t++;
             const rage = e.hp < e.maxHp * 0.5;
             const speedMul = diffRate(1.65, 0.03) * (rage ? 1.2 : 1);
@@ -642,11 +666,22 @@
         spawnEnemy({
           type: `stageBossV${variant + 1}`,
           x: W / 2,
-          y: 110,
+          y: -150,
+          introTargetY: 110,
           hp: scaledBossHp(Math.floor(diffRate(680, 0.08))),
           maxHp: scaledBossHp(Math.floor(diffRate(680, 0.08))),
           value: 10000,
           update(e) {
+            if (!e.entered) {
+              e.t++;
+              const p = Math.min(1, e.t / 75);
+              const eased = 1 - (1 - p) * (1 - p);
+              e.y = -150 + (e.introTargetY + 150) * eased;
+              if (p < 1) return;
+              e.entered = true;
+              e.t = 0;
+              e.y = e.introTargetY;
+            }
             e.t++;
             const p = e.hp / e.maxHp;
             const phase = p > 0.66 ? 1 : p > 0.33 ? 2 : 3;
@@ -775,14 +810,20 @@
           state.phaseEnemyDefeated = 0;
           state.midBossSpawnTimer = -1;
           state.stageBossSpawnTimer = -1;
+          state.stageBossDeployTimer = -1;
+          state.stageBossHasSpawned = false;
         }
         if (next === PHASE_STAGE_BOSS) {
           state.warningTimer = 90;
+          state.stageBossDeployTimer = 120;
+          state.stageBossHasSpawned = false;
         }
         if (next === PHASE_MID_B) {
           state.phaseEnemySpawned = 0;
           state.phaseEnemyDefeated = 0;
           state.stageBossSpawnTimer = -1;
+          state.stageBossDeployTimer = -1;
+          state.stageBossHasSpawned = false;
         }
       }
 
@@ -847,9 +888,19 @@
           }
           if (state.stageBossSpawnTimer === 0) {
             changePhase(PHASE_STAGE_BOSS);
-            spawnStageBoss();
           }
         } else if (state.phase === PHASE_STAGE_BOSS) {
+          if (!state.stageBossHasSpawned) {
+            if (state.stageBossDeployTimer >= 0) {
+              state.stageBossDeployTimer--;
+            }
+            if (state.stageBossDeployTimer === 0) {
+              spawnStageBoss();
+              state.stageBossHasSpawned = true;
+              state.stageBossDeployTimer = -1;
+            }
+            return;
+          }
           if (!state.enemies.some((e) => e.alive && e.type.startsWith('stageBoss'))) {
             state.transitionTimer = 220;
             changePhase(PHASE_CLEAR_TRANSITION);
@@ -1067,7 +1118,7 @@
         ctx.textAlign = 'left';
         ctx.fillText(`SCORE ${state.score.toString().padStart(7, '0')}`, 16, 28);
         ctx.fillText(`LIFE ${'★'.repeat(Math.max(0, state.lives))}`, 190, 28);
-        ctx.fillText(`PHASE ${phaseLabel[state.phase]}`, 270, 28);
+        ctx.fillText(`PHASE ${phaseLabel(state.phase)}`, 270, 28);
         ctx.fillText(`LOOP ${state.loop}`, 16, 46);
         if (state.debugMode) {
           ctx.fillStyle = '#ffe37a';
@@ -1082,7 +1133,7 @@
           ctx.fillStyle = '#ffffff';
           ctx.font = 'bold 28px monospace';
           ctx.textAlign = 'center';
-          ctx.fillText(`--- ${phaseLabel[state.phase]} ---`, W / 2, H / 2 - 70);
+          ctx.fillText(`--- ${phaseLabel(state.phase)} ---`, W / 2, H / 2 - 70);
           ctx.globalAlpha = 1;
         }
 
