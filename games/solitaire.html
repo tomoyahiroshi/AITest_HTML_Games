@@ -41,13 +41,15 @@
       flex-wrap: wrap;
     }
     .top-row {
-      justify-content: space-between;
+      justify-content: flex-start;
+      gap: clamp(6px, 1.2vw, 12px);
     }
     .left-piles,
     .foundation-row {
       display: flex;
       gap: clamp(6px, 1.2vw, 12px);
       align-items: flex-start;
+      flex-shrink: 0;
     }
 
     .pile {
