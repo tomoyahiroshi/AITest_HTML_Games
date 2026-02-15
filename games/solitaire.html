@@ -140,14 +140,6 @@
       font-size: clamp(12.6px, 1.8vw, 16.2px);
       line-height: 1;
     }
-    .corner-suit {
-      position: absolute;
-      top: 21px;
-      left: 8px;
-      font-size: clamp(12.6px, 1.8vw, 16.2px);
-      line-height: 1;
-      font-family: "Segoe UI Symbol", "Noto Sans Symbols 2", "Arial Unicode MS", sans-serif;
-    }
     .corner-suit-right {
       position: absolute;
       top: 6px;
@@ -735,10 +727,6 @@
       cornerRank.className = "corner-rank";
       cornerRank.textContent = RANKS[card.rank];
 
-      const cornerSuit = document.createElement("span");
-      cornerSuit.className = "corner-suit";
-      cornerSuit.textContent = card.suit;
-
       const rightSuit = document.createElement("span");
       rightSuit.className = "corner-suit-right";
       rightSuit.textContent = card.suit;
@@ -751,7 +739,7 @@
       centerSuit.className = "center-suit";
       centerSuit.textContent = card.suit;
 
-      container.append(cornerRank, cornerSuit, rightSuit, centerRank, centerSuit);
+      container.append(cornerRank, rightSuit, centerRank, centerSuit);
     }
 
     function cardNode(cardId, type, pileIndex, cardPos, offsetPx = 0) {
