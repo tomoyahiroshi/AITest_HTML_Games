@@ -112,6 +112,7 @@
         enemyBullets: [],
         enemies: [],
         stars: [],
+        explosions: [],
         maxEnemyBullets: 550
       };
 
@@ -225,6 +226,34 @@
       function aimedShot(x, y, speed, spread = 0) {
         const angle = Math.atan2(player.y - y, player.x - x) + spread;
         shootEnemyBullet(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed, 4, '#ffc56b');
+      }
+
+      function spawnExplosion(x, y, options = {}) {
+        const {
+          count = 18,
+          speed = 2.8,
+          spread = 1,
+          life = 34,
+          colors = ['#ffd9a6', '#ff8fb1', '#fff3d8'],
+          radius = 2.5,
+          gravity = 0.02
+        } = options;
+
+        for (let i = 0; i < count; i++) {
+          const angle = (Math.PI * 2 * i) / count + Math.random() * 0.35;
+          const mag = (0.45 + Math.random() * 0.8) * speed;
+          state.explosions.push({
+            x,
+            y,
+            vx: Math.cos(angle) * mag * spread,
+            vy: Math.sin(angle) * mag,
+            age: 0,
+            life: life + Math.floor(Math.random() * 10),
+            r: radius * (0.7 + Math.random() * 0.8),
+            gravity,
+            color: colors[(Math.random() * colors.length) | 0]
+          });
+        }
       }
 
       function spawnSkirmisherWave(count = 6, yStart = 90) {
@@ -713,6 +742,16 @@
               if (e.hp <= 0) {
                 e.alive = false;
                 addScore(e.value || 0);
+                const isBoss = e.type.includes('Boss');
+                spawnExplosion(e.x, e.y, {
+                  count: isBoss ? 54 : 18,
+                  speed: isBoss ? 4.2 : 2.8,
+                  life: isBoss ? 55 : 32,
+                  radius: isBoss ? 4 : 2.4,
+                  colors: isBoss
+                    ? ['#fff5ba', '#ff9f78', '#ff77b2', '#ffffff']
+                    : ['#ffe2b9', '#ff95b7', '#fff7da']
+                });
               }
               break;
             }
@@ -727,21 +766,45 @@
             if (distanceSq(player, b) <= rr) {
               b.alive = false;
               state.lives--;
+              spawnExplosion(player.x, player.y, {
+                count: 36,
+                speed: 3.3,
+                life: 44,
+                radius: 3.1,
+                gravity: 0.015,
+                colors: ['#b3d7ff', '#ffffff', '#8fa9ff']
+              });
               player.invincible = 120;
               player.x = W / 2;
               player.y = H - 80;
               state.enemyBullets.length = 0;
               if (state.lives <= 0) {
                 state.gameOver = true;
+                spawnExplosion(player.x, player.y, {
+                  count: 70,
+                  speed: 4.4,
+                  life: 62,
+                  radius: 4.2,
+                  colors: ['#ffffff', '#ffd2e0', '#ff8ebc', '#9db8ff']
+                });
               }
               break;
             }
           }
         }
 
+        for (const p of state.explosions) {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vx *= 0.98;
+          p.vy = p.vy * 0.98 + p.gravity;
+          p.age++;
+        }
+
         state.enemies = state.enemies.filter((e) => e.alive);
         state.playerBullets = state.playerBullets.filter((b) => b.alive);
         state.enemyBullets = state.enemyBullets.filter((b) => b.alive);
+        state.explosions = state.explosions.filter((p) => p.age < p.life);
       }
 
       function drawAscii(lines, x, y, color, size = 16) {
@@ -803,6 +866,17 @@
           ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
           ctx.fill();
         }
+
+        for (const p of state.explosions) {
+          const alpha = 1 - p.age / p.life;
+          if (alpha <= 0) continue;
+          ctx.globalAlpha = alpha;
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.r * (0.7 + alpha * 0.8), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
 
         if (!(player.invincible > 0 && (Math.floor(state.frame / 6) % 2 === 0))) {
           drawAscii([
