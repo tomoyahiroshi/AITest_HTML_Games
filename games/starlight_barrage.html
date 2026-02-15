@@ -817,11 +817,10 @@
         state.phaseFrame++;
 
         if (state.phase === PHASE_MID_A) {
-          if (state.phaseFrame === 40 || state.phaseFrame === 360) spawnWaveA();
-          if (state.phaseFrame === 220) spawnWaveAAlt();
-          if (state.phaseFrame === 130) spawnWaveAFormationSweep();
-          if (state.phaseFrame === 500) spawnWaveAFormationDrop();
-          if (state.phaseFrame > 620 && state.midBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
+          if (state.phaseFrame === 20 || state.phaseFrame === 400) spawnWaveB();
+          if (state.phaseFrame === 140 || state.phaseFrame === 520) spawnWaveC();
+          if (state.phaseFrame === 640 || state.phaseFrame === 760) spawnWaveBMix();
+          if (state.phaseFrame > 960 && state.midBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
             state.midBossSpawnTimer = 75;
           }
           if (state.midBossSpawnTimer >= 0) {
@@ -836,10 +835,11 @@
             changePhase(PHASE_MID_B);
           }
         } else if (state.phase === PHASE_MID_B) {
-          if (state.phaseFrame === 20 || state.phaseFrame === 400) spawnWaveB();
-          if (state.phaseFrame === 140 || state.phaseFrame === 520) spawnWaveC();
-          if (state.phaseFrame === 640 || state.phaseFrame === 760) spawnWaveBMix();
-          if (state.phaseFrame > 960 && state.stageBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
+          if (state.phaseFrame === 40 || state.phaseFrame === 360) spawnWaveA();
+          if (state.phaseFrame === 220) spawnWaveAAlt();
+          if (state.phaseFrame === 130) spawnWaveAFormationSweep();
+          if (state.phaseFrame === 500) spawnWaveAFormationDrop();
+          if (state.phaseFrame > 620 && state.stageBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
             state.stageBossSpawnTimer = 90;
           }
           if (state.stageBossSpawnTimer >= 0) {
