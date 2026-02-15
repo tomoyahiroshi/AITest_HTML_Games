@@ -1,10 +1,93 @@
 <!doctype html>
-<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>HTML Games</title>
-<style>body{font-family:Arial;padding:24px}a{display:block;margin:8px 0;font-size:20px}</style></head>
-<body><h1>HTML Games</h1>
-<a href="games/sudoku.html">数独</a>
-<a href="games/tetris.html">テトリス</a>
-<a href="games/minesweeper.html">マインスイーパー</a>
-<a href="games/solitaire.html">ソリティア</a>
-<a href="games/starlight_barrage.html">スターライト・バラージュ（シューティング）</a>
-</body></html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HTML Games Collection</title>
+  <style>
+    :root{
+      --bg:#0b1020;
+      --panel:#131a2e;
+      --text:#e6edf7;
+      --muted:#9fb1ce;
+      --accent:#5eead4;
+      --accent2:#60a5fa;
+      --border:#223152;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at 20% -10%,#1e3a8a55,transparent 35%),
+        radial-gradient(circle at 80% -20%,#14b8a655,transparent 30%),
+        var(--bg);
+      min-height:100dvh;
+      line-height:1.6;
+    }
+    .container{max-width:1100px;margin:0 auto;padding:32px 20px 56px}
+    header{margin-bottom:22px}
+    h1{font-size:clamp(28px,5vw,44px);margin:0 0 8px}
+    .lead{color:var(--muted);margin:0;max-width:80ch}
+    .games{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;margin-top:18px}
+    .game{
+      display:flex;flex-direction:column;gap:8px;
+      background:linear-gradient(180deg,#162041,#10182d);
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:14px;
+      text-decoration:none;
+      color:inherit;
+      transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;
+    }
+    .game:hover{transform:translateY(-2px);border-color:#3b82f6;box-shadow:0 8px 22px #03071288}
+    .tag{font-size:12px;color:#031627;background:linear-gradient(120deg,var(--accent),var(--accent2));font-weight:700;padding:3px 8px;border-radius:999px;width:max-content}
+    .title{font-size:22px;font-weight:700}
+    .desc{color:var(--muted);font-size:14px}
+    footer{margin-top:22px;font-size:13px;color:#89a0c4}
+  </style>
+</head>
+<body>
+  <main class="container">
+    <header>
+      <h1>HTML Games Collection</h1>
+      <p class="lead">ブラウザですぐ遊べるゲーム集です。定番のパズルやアクションを、シンプルな HTML / CSS / JavaScript で楽しめます。各カードからゲームへ移動できます。</p>
+    </header>
+
+    <section class="games" aria-label="ゲーム一覧">
+      <a class="game" href="games/sudoku.html">
+        <span class="tag">パズル</span>
+        <span class="title">数独</span>
+        <span class="desc">9×9 のマスを埋める論理パズル。難易度を選び、重複しない数字配置を目指します。</span>
+      </a>
+
+      <a class="game" href="games/tetris.html">
+        <span class="tag">アクション</span>
+        <span class="title">テトリス</span>
+        <span class="desc">落下するテトロミノを操作してラインを揃えるゲーム。スコアとレベルの更新に対応しています。</span>
+      </a>
+
+      <a class="game" href="games/minesweeper.html">
+        <span class="tag">思考・探索</span>
+        <span class="title">マインスイーパー</span>
+        <span class="desc">地雷を避けながら全マスを開く定番ゲーム。難易度選択、旗、タイマー機能付きです。</span>
+      </a>
+
+      <a class="game" href="games/solitaire.html">
+        <span class="tag">カード</span>
+        <span class="title">ソリティア</span>
+        <span class="desc">Klondike ルールの 1 人用カードゲーム。場札を整理し、4 つの組札を完成させます。</span>
+      </a>
+
+      <a class="game" href="games/starlight_barrage.html">
+        <span class="tag">シューティング</span>
+        <span class="title">スターライト・バラージュ</span>
+        <span class="desc">弾幕を回避しつつ敵を撃破するアクションシューティング。短時間でも遊びやすい構成です。</span>
+      </a>
+    </section>
+
+    <footer>© HTML Games Collection</footer>
+  </main>
+</body>
+</html>
