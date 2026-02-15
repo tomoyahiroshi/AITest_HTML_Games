@@ -7,7 +7,8 @@
     body{font-family:Arial;margin:0;background:#0f172a;color:#e2e8f0;display:grid;place-items:center;min-height:100vh}
     .app{display:flex;gap:20px;background:#111827;padding:18px;border-radius:12px}
     canvas{background:#020617;border:2px solid #334155}
-    .panel{width:200px}.panel button{width:100%;margin:4px 0;padding:8px}
+    .panel{width:220px}.panel button{width:100%;margin:4px 0;padding:8px}
+    #status{font-weight:700;color:#93c5fd}
   </style>
 </head>
 <body>
@@ -18,44 +19,178 @@
     <p>Score: <span id="score">0</span></p>
     <p>Level: <span id="level">1</span></p>
     <p>Lines: <span id="lines">0</span></p>
+    <p>Status: <span id="status">READY</span></p>
+    <h3>Next</h3>
     <canvas id="next" width="120" height="120"></canvas>
-    <p>←→ 移動 / ↑ 回転 / ↓ 落下 / Space ハードドロップ</p>
+    <p>←→:移動 / ↓:ソフトドロップ / ↑ or X:右回転 / Z:左回転 / Space:ハードドロップ / P:一時停止・再開</p>
     <button id="start">開始</button>
     <button id="pause">一時停止</button>
+    <button id="resume">再開</button>
     <button id="restart">リスタート</button>
-    <p id="status"></p>
   </div>
 </div>
 <script>
-const COLS=10, ROWS=20, SIZE=30;
+const COLS=10, ROWS=20, SIZE=30, LOCK_DELAY=400;
+const STATUS={READY:'READY',PLAYING:'PLAYING',PAUSED:'PAUSED',GAME_OVER:'GAME OVER'};
 const colors={I:'#22d3ee',O:'#facc15',T:'#a78bfa',S:'#34d399',Z:'#fb7185',J:'#60a5fa',L:'#fb923c'};
 const shapes={I:[[1,1,1,1]],O:[[1,1],[1,1]],T:[[0,1,0],[1,1,1]],S:[[0,1,1],[1,1,0]],Z:[[1,1,0],[0,1,1]],J:[[1,0,0],[1,1,1]],L:[[0,0,1],[1,1,1]]};
+
 const board=Array.from({length:ROWS},()=>Array(COLS).fill(''));
-let cur,next,score=0,level=1,lines=0,dropMs=700,last=0,acc=0,running=false,paused=false;
+let bag=[],cur=null,next=null,score=0,level=1,lines=0,dropMs=700,last=0,acc=0;
+let state=STATUS.READY,lockMs=0;
+
 const ctx=game.getContext('2d'), nctx=next.getContext('2d');
-function randPiece(){const t=Object.keys(shapes)[Math.floor(Math.random()*7)];return {type:t,m:shapes[t].map(r=>[...r]),x:3,y:0};}
-function collide(p,dx=0,dy=0,m=p.m){for(let y=0;y<m.length;y++)for(let x=0;x<m[y].length;x++)if(m[y][x]){let nx=p.x+x+dx, ny=p.y+y+dy;if(nx<0||nx>=COLS||ny>=ROWS|| (ny>=0&&board[ny][nx])) return true;}return false;}
-function merge(){cur.m.forEach((r,y)=>r.forEach((v,x)=>{if(v&&cur.y+y>=0)board[cur.y+y][cur.x+x]=cur.type;}));}
-function rotate(m){return m[0].map((_,i)=>m.map(r=>r[i]).reverse());}
-function spawn(){cur=next||randPiece();cur.x=3;cur.y=0;next=randPiece();if(collide(cur)){running=false;status.textContent='ゲームオーバー';}}
-function clearLines(){let c=0;for(let y=ROWS-1;y>=0;y--){if(board[y].every(Boolean)){board.splice(y,1);board.unshift(Array(COLS).fill(''));c++;y++;}}
-if(c){lines+=c;score+=[0,100,300,500,800][c];level=1+Math.floor(lines/10);dropMs=Math.max(100,700-(level-1)*60);} }
-function drawCell(c,x,y,size=SIZE,context=ctx){context.fillStyle=colors[c];context.fillRect(x*size,y*size,size-1,size-1);} 
-function draw(){ctx.clearRect(0,0,300,600);for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(board[y][x])drawCell(board[y][x],x,y);
-cur?.m.forEach((r,y)=>r.forEach((v,x)=>v&&drawCell(cur.type,cur.x+x,cur.y+y)));
-scoreEl.textContent=score;levelEl.textContent=level;linesEl.textContent=lines;
-nctx.clearRect(0,0,120,120);next.m.forEach((r,y)=>r.forEach((v,x)=>v&&drawCell(next.type,x+1,y+1,24,nctx)));}
-function tick(ts){if(!running)return;requestAnimationFrame(tick);if(paused)return;const dt=ts-last;last=ts;acc+=dt;if(acc>dropMs){if(!collide(cur,0,1))cur.y++;else{merge();clearLines();spawn();}acc=0;}draw();}
-function move(dx){if(running&&!paused&&!collide(cur,dx,0))cur.x+=dx;draw();}
-function softDrop(){if(running&&!paused){if(!collide(cur,0,1))cur.y++;else{merge();clearLines();spawn();}draw();}}
-function hardDrop(){if(running&&!paused){while(!collide(cur,0,1))cur.y++;merge();clearLines();spawn();draw();}}
-function spin(){if(running&&!paused){const rm=rotate(cur.m);if(!collide(cur,0,0,rm))cur.m=rm;draw();}}
-function reset(){for(let r of board)r.fill('');score=lines=0;level=1;dropMs=700;next=randPiece();spawn();status.textContent='';draw();}
-start.onclick=()=>{if(!running){reset();running=true;paused=false;last=performance.now();requestAnimationFrame(tick);}};
-pause.onclick=()=>{if(running){paused=!paused;status.textContent=paused?'一時停止中':'';}};
-restart.onclick=()=>{running=true;paused=false;reset();last=performance.now();requestAnimationFrame(tick);};
-window.addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' '].includes(e.key))e.preventDefault();
-if(e.key==='ArrowLeft')move(-1);if(e.key==='ArrowRight')move(1);if(e.key==='ArrowDown')softDrop();if(e.key==='ArrowUp')spin();if(e.key===' ')hardDrop();});
-next=randPiece();draw();
+const scoreEl=document.getElementById('score');
+const levelEl=document.getElementById('level');
+const linesEl=document.getElementById('lines');
+const statusEl=document.getElementById('status');
+
+function setStatus(nextState){state=nextState;statusEl.textContent=nextState;}
+function isPlaying(){return state===STATUS.PLAYING;}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function drawCell(c,x,y,size=SIZE,context=ctx){context.fillStyle=colors[c];context.fillRect(x*size,y*size,size-1,size-1);}
+function refillBag(){bag.push(...shuffle(['I','O','T','S','Z','J','L']));}
+function takeType(){if(bag.length===0)refillBag();return bag.shift();}
+function createPiece(type){return {type,m:shapes[type].map(r=>[...r]),x:3,y:0};}
+function rotateRight(m){return m[0].map((_,i)=>m.map(r=>r[i]).reverse());}
+function rotateLeft(m){return m[0].map((_,i)=>m.map(r=>r[r.length-1-i]));}
+
+function collide(p,dx=0,dy=0,m=p.m){
+  for(let y=0;y<m.length;y++){
+    for(let x=0;x<m[y].length;x++){
+      if(!m[y][x]) continue;
+      const nx=p.x+x+dx, ny=p.y+y+dy;
+      if(nx<0||nx>=COLS||ny>=ROWS) return true;
+      if(ny>=0&&board[ny][nx]) return true;
+    }
+  }
+  return false;
+}
+
+function tryRotate(direction){
+  if(!isPlaying()||!cur) return;
+  const rotated=direction==='right'?rotateRight(cur.m):rotateLeft(cur.m);
+  const kicks=[0,-1,1,-2,2];
+  for(const k of kicks){
+    if(!collide(cur,k,0,rotated)){
+      cur.x+=k;
+      cur.m=rotated;
+      lockMs=0;
+      draw();
+      return;
+    }
+  }
+}
+
+function merge(){
+  cur.m.forEach((r,y)=>r.forEach((v,x)=>{
+    if(v&&cur.y+y>=0) board[cur.y+y][cur.x+x]=cur.type;
+  }));
+}
+
+function clearLines(){
+  let cleared=0;
+  for(let y=ROWS-1;y>=0;y--){
+    if(board[y].every(Boolean)){
+      board.splice(y,1);
+      board.unshift(Array(COLS).fill(''));
+      cleared++;
+      y++;
+    }
+  }
+  if(cleared){
+    lines+=cleared;
+    score+=[0,100,300,500,800][cleared]*level;
+    level=1+Math.floor(lines/10);
+    dropMs=Math.max(100,700-(level-1)*60);
+  }
+}
+
+function spawn(){
+  cur=next||createPiece(takeType());
+  cur.x=3;cur.y=0;
+  next=createPiece(takeType());
+  lockMs=0;
+  if(collide(cur)) setStatus(STATUS.GAME_OVER);
+}
+
+function stepDown(){
+  if(!collide(cur,0,1)){
+    cur.y++;
+    lockMs=0;
+    return;
+  }
+  lockMs+=dropMs;
+  if(lockMs>=LOCK_DELAY){
+    merge();
+    clearLines();
+    spawn();
+  }
+}
+
+function draw(){
+  ctx.clearRect(0,0,300,600);
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++) if(board[y][x]) drawCell(board[y][x],x,y);
+  if(cur) cur.m.forEach((r,y)=>r.forEach((v,x)=>v&&drawCell(cur.type,cur.x+x,cur.y+y)));
+  scoreEl.textContent=score;
+  levelEl.textContent=level;
+  linesEl.textContent=lines;
+  nctx.clearRect(0,0,120,120);
+  if(next) next.m.forEach((r,y)=>r.forEach((v,x)=>v&&drawCell(next.type,x+1,y+1,24,nctx)));
+}
+
+function gameLoop(ts){
+  requestAnimationFrame(gameLoop);
+  if(!isPlaying()) return;
+  const dt=ts-last;last=ts;acc+=dt;
+  if(acc>=dropMs){
+    acc=0;
+    stepDown();
+  }
+  draw();
+}
+
+function move(dx){if(isPlaying()&&!collide(cur,dx,0)){cur.x+=dx;lockMs=0;draw();}}
+function softDrop(){if(isPlaying()){if(!collide(cur,0,1)){cur.y++;lockMs=0;}else{lockMs=LOCK_DELAY;stepDown();}draw();}}
+function hardDrop(){
+  if(!isPlaying()) return;
+  while(!collide(cur,0,1)) cur.y++;
+  merge();
+  clearLines();
+  spawn();
+  draw();
+}
+
+function startGame(){
+  for(const row of board) row.fill('');
+  bag=[];score=0;lines=0;level=1;dropMs=700;acc=0;lockMs=0;
+  next=createPiece(takeType());
+  spawn();
+  setStatus(STATUS.PLAYING);
+  last=performance.now();
+  draw();
+}
+
+function pauseGame(){if(isPlaying()) setStatus(STATUS.PAUSED);}
+function resumeGame(){if(state===STATUS.PAUSED){setStatus(STATUS.PLAYING);last=performance.now();}}
+
+start.onclick=startGame;
+pause.onclick=pauseGame;
+resume.onclick=resumeGame;
+restart.onclick=startGame;
+
+window.addEventListener('keydown',e=>{
+  if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' ','x','X','z','Z','p','P'].includes(e.key)) e.preventDefault();
+  if(e.key==='ArrowLeft') move(-1);
+  if(e.key==='ArrowRight') move(1);
+  if(e.key==='ArrowDown') softDrop();
+  if(e.key==='ArrowUp'||e.key==='x'||e.key==='X') tryRotate('right');
+  if(e.key==='z'||e.key==='Z') tryRotate('left');
+  if(e.key===' ') hardDrop();
+  if(e.key==='p'||e.key==='P'){if(isPlaying()) pauseGame(); else if(state===STATUS.PAUSED) resumeGame();}
+});
+
+draw();
+requestAnimationFrame(gameLoop);
 </script>
 </body></html>
