@@ -531,7 +531,7 @@
           ? i * offset
           : type === "stock"
             ? i * offset
-            : (i === 0 ? 0 : offset);
+            : i * offset;
         const cardEl = cardNode(cardId, type, index, cardPos, cardOffset);
         pileEl.appendChild(cardEl);
       });
