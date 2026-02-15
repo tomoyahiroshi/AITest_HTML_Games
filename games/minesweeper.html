@@ -28,7 +28,7 @@ dialog::backdrop{background:rgba(0,0,0,.35)}
   </div>
 </dialog>
 <script>
-let rows,cols,mines,grid=[],first=true,flags=0,opened=0,timer=0,tid=null,gameOver=false;
+let rows,cols,mines,grid=[],minesPlaced=false,flags=0,opened=0,timer=0,tid=null,gameOver=false;
 const board=document.getElementById('board');
 const difficultyEl=document.getElementById('difficulty');
 const newGameBtn=document.getElementById('newGameBtn');
@@ -83,8 +83,17 @@ function showResultDialog(message){
 
 function startTimer(){clearInterval(tid);tid=setInterval(()=>{if(!gameOver){timer++;timeEl.textContent=timer;}},1000);}
 function neighbors(r,c){const n=[];for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;let nr=r+dr,nc=c+dc;if(nr>=0&&nr<rows&&nc>=0&&nc<cols)n.push([nr,nc]);}return n;}
-function placeMines(sr,sc){let placed=0;while(placed<mines){let r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);if((r===sr&&c===sc)||grid[r][c].mine)continue;grid[r][c].mine=true;placed++;}
+function placeMines(sr,sc){
+const safeZone=new Set([`${sr},${sc}`,...neighbors(sr,sc).map(([r,c])=>`${r},${c}`)]);
+let placed=0;
+while(placed<mines){
+  let r=Math.floor(Math.random()*rows),c=Math.floor(Math.random()*cols);
+  if(safeZone.has(`${r},${c}`)||grid[r][c].mine)continue;
+  grid[r][c].mine=true;
+  placed++;
+}
 for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)grid[r][c].count=neighbors(r,c).filter(([nr,nc])=>grid[nr][nc].mine).length;}
+function ensureMinesPlaced(r,c){if(minesPlaced)return;placeMines(r,c);minesPlaced=true;startTimer();}
 function revealAroundNumber(r,c){
   const cell=grid[r][c];
   if(!cell.open||!cell.count||gameOver)return;
@@ -96,7 +105,7 @@ function revealAroundNumber(r,c){
     if(!n.open&&!n.flag)reveal(nr,nc);
   }
 }
-function reveal(r,c){const cell=grid[r][c];if(gameOver)return;if(cell.open){revealAroundNumber(r,c);return;}if(cell.flag)return;if(first){placeMines(r,c);first=false;startTimer();}
+function reveal(r,c){const cell=grid[r][c];if(gameOver)return;if(cell.open){revealAroundNumber(r,c);return;}if(cell.flag)return;ensureMinesPlaced(r,c);
 cell.open=true;opened++;const el=cell.el;el.classList.add('open');if(cell.mine){el.textContent='💣';el.classList.add('mine');lose();return;}
 if(cell.count)el.textContent=cell.count;else{const q=[[r,c]];while(q.length){const [cr,cc]=q.shift();for(const [nr,nc] of neighbors(cr,cc)){const n=grid[nr][nc];if(!n.open&&!n.flag&&!n.mine){n.open=true;opened++;n.el.classList.add('open');if(n.count)n.el.textContent=n.count;else q.push([nr,nc]);}}}}
 checkWin();}
@@ -104,7 +113,7 @@ function toggleFlag(e,r,c){e.preventDefault();const cell=grid[r][c];if(cell.open
 function lose(){gameOver=true;statusEl.textContent='ゲームオーバー';clearInterval(tid);for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(grid[r][c].mine&&!grid[r][c].open){grid[r][c].el.textContent='💣';grid[r][c].el.classList.add('mine');}}
 function checkWin(){if(opened===rows*cols-mines){gameOver=true;statusEl.textContent='クリア！';clearInterval(tid);showResultDialog(`クリア！ 記録: ${timer}秒`);}}
 function startNewGame(){[rows,cols,mines]=difficultyEl.value.split(',').map(Number);grid=Array.from({length:rows},()=>Array.from({length:cols},()=>({mine:false,open:false,flag:false,count:0,el:null})));
-board.innerHTML='';first=true;flags=0;opened=0;timer=0;gameOver=false;timeEl.textContent='0';remainEl.textContent=mines;statusEl.textContent='進行中';clearInterval(tid);
+board.innerHTML='';minesPlaced=false;flags=0;opened=0;timer=0;gameOver=false;timeEl.textContent='0';remainEl.textContent=mines;statusEl.textContent='進行中';clearInterval(tid);
 for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const b=document.createElement('button');b.className='cell';b.onclick=()=>reveal(r,c);b.oncontextmenu=(e)=>toggleFlag(e,r,c);grid[r][c].el=b;board.appendChild(b);} 
 updateCellSize();}
 newGameBtn.onclick=async ()=>{if(await showConfirmDialog('現在のゲームをリセットしますか？'))startNewGame();};
