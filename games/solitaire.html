@@ -411,17 +411,27 @@
       return layer;
     }
 
-    function endPointerDrag(cancelled = false) {
+    function cleanupPointerDragVisuals() {
       if (!pointerDrag) return;
       pointerDrag.cardEl.classList.remove("dragging");
-      if (pointerDrag.previewEl?.parentNode) pointerDrag.previewEl.parentNode.removeChild(pointerDrag.previewEl);
+      if (pointerDrag.cardEl.hasPointerCapture?.(pointerDrag.pointerId)) {
+        pointerDrag.cardEl.releasePointerCapture(pointerDrag.pointerId);
+      }
+      if (pointerDrag.previewEl?.parentNode) {
+        pointerDrag.previewEl.parentNode.removeChild(pointerDrag.previewEl);
+      }
+      clearDropHighlights();
+    }
+
+    function endPointerDrag(cancelled = false) {
+      if (!pointerDrag) return;
+      cleanupPointerDragVisuals();
       if (!cancelled && pointerDrag.dropTarget) {
         tryMoveTo(pointerDrag.dropTarget.type, pointerDrag.dropTarget.index);
       } else {
         selection = null;
         render();
       }
-      clearDropHighlights();
       pointerDrag = null;
     }
 
@@ -840,6 +850,8 @@
         const confirmed = await showConfirmDialog("現在のゲームをリセットしますか？");
         if (!confirmed) return;
       }
+      cleanupPointerDragVisuals();
+      pointerDrag = null;
       state = createInitialState();
       selection = null;
       clearDialogShown = false;
@@ -848,6 +860,19 @@
     }
 
     document.getElementById("newBtn").addEventListener("click", () => startNewGame(true));
+    window.addEventListener("pointerup", () => {
+      if (pointerDrag) endPointerDrag(!pointerDrag.moved);
+    });
+    window.addEventListener("pointercancel", () => {
+      if (pointerDrag) endPointerDrag(true);
+    });
+    window.addEventListener("blur", () => {
+      if (!pointerDrag) return;
+      cleanupPointerDragVisuals();
+      pointerDrag = null;
+      selection = null;
+      render();
+    });
     window.addEventListener("resize", () => render());
 
     startNewGame(false);
