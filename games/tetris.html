@@ -36,10 +36,17 @@ const colors={I:'#22d3ee',O:'#facc15',T:'#a78bfa',S:'#34d399',Z:'#fb7185',J:'#60
 const shapes={I:[[1,1,1,1]],O:[[1,1],[1,1]],T:[[0,1,0],[1,1,1]],S:[[0,1,1],[1,1,0]],Z:[[1,1,0],[0,1,1]],J:[[1,0,0],[1,1,1]],L:[[0,0,1],[1,1,1]]};
 
 const board=Array.from({length:ROWS},()=>Array(COLS).fill(''));
-let bag=[],cur=null,next=null,score=0,level=1,lines=0,dropMs=700,last=0,acc=0;
+let bag=[],cur=null,nextPiece=null,score=0,level=1,lines=0,dropMs=700,last=0,acc=0;
 let state=STATUS.READY,lockMs=0;
 
-const ctx=game.getContext('2d'), nctx=next.getContext('2d');
+const gameCanvas=document.getElementById('game');
+const nextCanvas=document.getElementById('next');
+const startBtn=document.getElementById('start');
+const pauseBtn=document.getElementById('pause');
+const resumeBtn=document.getElementById('resume');
+const restartBtn=document.getElementById('restart');
+
+const ctx=gameCanvas.getContext('2d'), nctx=nextCanvas.getContext('2d');
 const scoreEl=document.getElementById('score');
 const levelEl=document.getElementById('level');
 const linesEl=document.getElementById('lines');
@@ -107,9 +114,9 @@ function clearLines(){
 }
 
 function spawn(){
-  cur=next||createPiece(takeType());
+  cur=nextPiece||createPiece(takeType());
   cur.x=3;cur.y=0;
-  next=createPiece(takeType());
+  nextPiece=createPiece(takeType());
   lockMs=0;
   if(collide(cur)) setStatus(STATUS.GAME_OVER);
 }
@@ -136,7 +143,7 @@ function draw(){
   levelEl.textContent=level;
   linesEl.textContent=lines;
   nctx.clearRect(0,0,120,120);
-  if(next) next.m.forEach((r,y)=>r.forEach((v,x)=>v&&drawCell(next.type,x+1,y+1,24,nctx)));
+  if(nextPiece) nextPiece.m.forEach((r,y)=>r.forEach((v,x)=>v&&drawCell(nextPiece.type,x+1,y+1,24,nctx)));
 }
 
 function gameLoop(ts){
@@ -164,7 +171,7 @@ function hardDrop(){
 function startGame(){
   for(const row of board) row.fill('');
   bag=[];score=0;lines=0;level=1;dropMs=700;acc=0;lockMs=0;
-  next=createPiece(takeType());
+  nextPiece=createPiece(takeType());
   spawn();
   setStatus(STATUS.PLAYING);
   last=performance.now();
@@ -174,10 +181,10 @@ function startGame(){
 function pauseGame(){if(isPlaying()) setStatus(STATUS.PAUSED);}
 function resumeGame(){if(state===STATUS.PAUSED){setStatus(STATUS.PLAYING);last=performance.now();}}
 
-start.onclick=startGame;
-pause.onclick=pauseGame;
-resume.onclick=resumeGame;
-restart.onclick=startGame;
+startBtn.onclick=startGame;
+pauseBtn.onclick=pauseGame;
+resumeBtn.onclick=resumeGame;
+restartBtn.onclick=startGame;
 
 window.addEventListener('keydown',e=>{
   if(['ArrowLeft','ArrowRight','ArrowDown','ArrowUp',' ','x','X','z','Z','p','P'].includes(e.key)) e.preventDefault();

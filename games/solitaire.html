@@ -16,10 +16,12 @@ body{font-family:Arial;background:#14532d;color:#fff;margin:0;padding:16px}.row{
 <script>
 const suits=['♠','♥','♦','♣']; const ranks=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 let stock=[],waste=[],found=[[],[],[],[]],tab=[[],[],[],[],[],[],[]],sel=null;
+const statusEl=document.getElementById('status');
+const newBtnEl=document.getElementById('newBtn');
 function color(s){return s==='♥'||s==='♦'?'red':'black'}
 function cardStr(c){return ranks[c.r]+c.s}
 function makeDeck(){const d=[];for(let s of suits)for(let r=0;r<13;r++)d.push({s,r,up:false});for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}return d;}
-function deal(){const d=makeDeck();tab=[[],[],[],[],[],[],[]];for(let i=0;i<7;i++)for(let j=0;j<=i;j++){const c=d.pop();c.up=(j===i);tab[i].push(c);}stock=d;waste=[];found=[[],[],[],[]];sel=null;status.textContent='';render();}
+function deal(){const d=makeDeck();tab=[[],[],[],[],[],[],[]];for(let i=0;i<7;i++)for(let j=0;j<=i;j++){const c=d.pop();c.up=(j===i);tab[i].push(c);}stock=d;waste=[];found=[[],[],[],[]];sel=null;statusEl.textContent='';render();}
 function renderPile(el,cards,offset=0,table=false,pileType='',idx=0){el.innerHTML='';cards.forEach((c,i)=>{const div=document.createElement('div');div.className='card'+(c.up?'':' back')+(c.up&&color(c.s)==='red'?' red':'');if(c.up)div.textContent=cardStr(c);
 if(offset)div.style.marginTop=(i===0?0:offset)+'px';
 if(sel&&sel.type===pileType&&sel.idx===idx&&sel.pos===i)div.classList.add('selected');
@@ -43,13 +45,13 @@ function onCardClick(type,idx,pos){
   if(type==='tab'&&!c.up){if(pos===pile.length-1){c.up=true;render();}return;}
   if(!sel){sel={type,idx,pos};render();return;}
   if(sel.type===type&&sel.idx===idx&&sel.pos===pos){sel=null;render();return;}
-  const ok=moveCard(sel.type,sel.idx,sel.pos,type,idx); sel=null; render(); if(!ok)status.textContent='その移動はできません'; else status.textContent='';
+  const ok=moveCard(sel.type,sel.idx,sel.pos,type,idx); sel=null; render(); if(!ok)statusEl.textContent='その移動はできません'; else statusEl.textContent='';
 }
-function onEmptyTableau(i){if(!sel)return;const ok=moveCard(sel.type,sel.idx,sel.pos,'tab',i);sel=null;render();if(!ok)status.textContent='Kのみ空列へ移動可';else status.textContent='';}
+function onEmptyTableau(i){if(!sel)return;const ok=moveCard(sel.type,sel.idx,sel.pos,'tab',i);sel=null;render();if(!ok)statusEl.textContent='Kのみ空列へ移動可';else statusEl.textContent='';}
 stock.onclick=()=>{if(!stock.length){while(waste.length){const c=waste.pop();c.up=false;stock.unshift(c);}render();return;}const c=stock.pop();c.up=true;waste.push(c);render();};
-function checkWin(){if(found.every(p=>p.length===13))status.textContent='クリア！';}
+function checkWin(){if(found.every(p=>p.length===13))statusEl.textContent='クリア！';}
 function render(){renderPile(stockEl,stock.length?[{up:false}]:[]);renderPile(wasteEl,waste);for(let i=0;i<4;i++)renderPile(document.getElementById('f'+i),found[i],0,false,'found',i);
 const t=document.getElementById('tableau');t.innerHTML='';for(let i=0;i<7;i++){const p=document.createElement('div');p.className='pile tableau';renderPile(p,tab[i],20,true,'tab',i);t.appendChild(p);} }
 const stockEl=document.getElementById('stock'),wasteEl=document.getElementById('waste');
-newBtn.onclick=deal;deal();
+newBtnEl.onclick=deal;deal();
 </script></body></html>
