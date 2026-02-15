@@ -27,6 +27,9 @@
     .status { font-weight: 700; }
     .status.clear { color: #fde047; }
     .message { color: #fde68a; min-height: 1.2em; }
+    dialog{border:none;border-radius:10px;padding:16px 18px;max-width:320px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    .dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+    dialog::backdrop{background:rgba(0,0,0,.45)}
 
     .row { display: flex; gap: 12px; align-items: flex-start; }
     .spacer { flex: 1; }
@@ -140,6 +143,14 @@
     <div id="tableauRow" class="row"></div>
   </main>
 
+  <dialog id="confirmDialog">
+    <p id="confirmMessage"></p>
+    <div class="dialog-actions">
+      <button id="confirmCancel" type="button">キャンセル</button>
+      <button id="confirmOk" type="button">実行する</button>
+    </div>
+  </dialog>
+
   <script>
     const SUITS = ["♠", "♥", "♦", "♣"];
     const RANKS = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
@@ -152,11 +163,16 @@
     const tableauRowEl = document.getElementById("tableauRow");
     const statusEl = document.getElementById("status");
     const messageEl = document.getElementById("message");
+    const confirmDialogEl = document.getElementById("confirmDialog");
+    const confirmMessageEl = document.getElementById("confirmMessage");
+    const confirmCancelEl = document.getElementById("confirmCancel");
+    const confirmOkEl = document.getElementById("confirmOk");
 
     const foundationEls = Array.from({ length: FOUNDATION_COUNT }, (_, i) => document.getElementById(`f${i}`));
 
     let state = null;
     let selection = null;
+    let clearDialogShown = false;
 
     function cardColor(suit) {
       return suit === "♥" || suit === "♦" ? "red" : "black";
@@ -308,6 +324,44 @@
 
     function setMessage(text = "") {
       messageEl.textContent = text;
+    }
+
+    function showConfirmDialog(message) {
+      if (typeof confirmDialogEl.showModal !== "function") {
+        return Promise.resolve(window.confirm(message));
+      }
+      confirmCancelEl.hidden = false;
+      confirmCancelEl.textContent = "キャンセル";
+      confirmOkEl.textContent = "実行する";
+      confirmMessageEl.textContent = message;
+      confirmDialogEl.showModal();
+      return new Promise((resolve) => {
+        const onCancel = () => {
+          cleanup();
+          confirmDialogEl.close();
+          resolve(false);
+        };
+        const onOk = () => {
+          cleanup();
+          confirmDialogEl.close();
+          resolve(true);
+        };
+        const cleanup = () => {
+          confirmCancelEl.removeEventListener("click", onCancel);
+          confirmOkEl.removeEventListener("click", onOk);
+        };
+        confirmCancelEl.addEventListener("click", onCancel);
+        confirmOkEl.addEventListener("click", onOk);
+      });
+    }
+
+    async function promptRestartAfterGameClear() {
+      if (clearDialogShown) return;
+      clearDialogShown = true;
+      const shouldRestart = await showConfirmDialog("ゲームクリアです。新規ゲームを開始しますか？");
+      clearDialogShown = false;
+      if (!shouldRestart) return;
+      startNewGame(false);
     }
 
     function updateStatus() {
@@ -577,6 +631,10 @@
       verifyIntegrity(state);
       updateStatus();
 
+      if (state.status === "CLEAR") {
+        promptRestartAfterGameClear();
+      }
+
       const visibleStock = state.stock.length ? state.stock.slice(-3) : [];
       renderPile(stockEl, visibleStock, "stock", 0, 3);
       stockEl.onclick = handleStockClick;
@@ -602,15 +660,21 @@
       }
     }
 
-    document.getElementById("newBtn").addEventListener("click", () => {
+    async function startNewGame(shouldConfirm = true) {
+      if (shouldConfirm) {
+        const confirmed = await showConfirmDialog("現在のゲームをリセットしますか？");
+        if (!confirmed) return;
+      }
       state = createInitialState();
       selection = null;
+      clearDialogShown = false;
       setMessage("");
       render();
-    });
+    }
 
-    state = createInitialState();
-    render();
+    document.getElementById("newBtn").addEventListener("click", () => startNewGame(true));
+
+    startNewGame(false);
   </script>
 </body>
 </html>
