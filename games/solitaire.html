@@ -48,7 +48,7 @@
       margin-top: 0;
     }
     .pile.waste {
-      width: calc(var(--card-w) + 56px);
+      width: calc(var(--card-w) + 112px);
     }
     .pile.waste .card {
       position: absolute;
@@ -524,13 +524,15 @@
         pileEl.style.height = "";
       }
 
-      pile.forEach((cardId, i) => {
+      pile.forEach((entry, i) => {
+        const cardId = typeof entry === "string" ? entry : entry.cardId;
+        const cardPos = typeof entry === "string" ? i : entry.cardPos;
         const cardOffset = type === "tableau"
           ? i * offset
           : type === "stock"
             ? i * offset
             : (i === 0 ? 0 : offset);
-        const cardEl = cardNode(cardId, type, index, i, cardOffset);
+        const cardEl = cardNode(cardId, type, index, cardPos, cardOffset);
         pileEl.appendChild(cardEl);
       });
 
@@ -565,7 +567,13 @@
       stockEl.onclick = handleStockClick;
       stockEl.classList.toggle("placeholder", state.stock.length === 0);
 
-      const visibleWaste = state.waste.slice(-3);
+      const visibleWaste = state.waste
+        .slice(-5)
+        .map((cardId, i, cards) => ({
+          cardId,
+          cardPos: state.waste.length - cards.length + i,
+        }))
+        .reverse();
       renderPile(wasteEl, visibleWaste, "waste", 0, 28);
 
       foundationEls.forEach((el, i) => renderPile(el, state.foundation[i], "foundation", i));
