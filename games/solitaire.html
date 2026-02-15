@@ -47,6 +47,14 @@
       left: 3px;
       margin-top: 0;
     }
+    .pile.waste {
+      width: calc(var(--card-w) + 56px);
+    }
+    .pile.waste .card {
+      position: absolute;
+      top: 3px;
+      margin-top: 0;
+    }
     .pile.placeholder::before {
       content: attr(data-label);
       position: absolute;
@@ -117,7 +125,7 @@
 
     <div class="row" style="margin-bottom:14px;">
       <div id="stock" class="pile placeholder stock" data-label="STOCK"></div>
-      <div id="waste" class="pile placeholder" data-label="WASTE"></div>
+      <div id="waste" class="pile placeholder waste" data-label="WASTE"></div>
       <div class="spacer"></div>
       <div id="f0" class="pile placeholder" data-label="A♠"></div>
       <div id="f1" class="pile placeholder" data-label="A♥"></div>
@@ -426,6 +434,8 @@
       } else if (type === "stock") {
         div.style.top = `${offsetPx}px`;
         div.style.left = `${offsetPx}px`;
+      } else if (type === "waste") {
+        div.style.left = `${offsetPx}px`;
       } else {
         div.style.marginTop = `${offsetPx}px`;
       }
@@ -555,7 +565,8 @@
       stockEl.onclick = handleStockClick;
       stockEl.classList.toggle("placeholder", state.stock.length === 0);
 
-      renderPile(wasteEl, state.waste.length ? [state.waste[state.waste.length - 1]] : [], "waste", 0);
+      const visibleWaste = state.waste.slice(-3);
+      renderPile(wasteEl, visibleWaste, "waste", 0, 28);
 
       foundationEls.forEach((el, i) => renderPile(el, state.foundation[i], "foundation", i));
 
