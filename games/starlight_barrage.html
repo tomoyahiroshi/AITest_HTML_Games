@@ -321,10 +321,10 @@
                 e.x += i === 0 ? -0.3 : 0.3;
               }
 
-              if (e.t % scaledShotInterval(56) === 0) {
+              if (e.t % scaledShotInterval(112) === 0) {
                 for (let n = -2; n <= 2; n++) aimedShot(e.x, e.y + 10, diffRate(1.55, 0.03), n * 0.1);
               }
-              if (e.t % scaledShotInterval(96) === 0) {
+              if (e.t % scaledShotInterval(192) === 0) {
                 ringBullets(e.x, e.y + 12, scaledBulletCount(8), diffRate(0.95, 0.03), e.t * 0.03, '#6ec9ff');
               }
               if (e.t > 520) e.alive = false;
@@ -536,21 +536,16 @@
               e.t++;
               e.x += fromLeft ? 0.68 : -0.68;
               e.y += Math.sin((e.t + i * 30) / 32) * 0.22;
-              if (e.t % scaledShotInterval(28) === 0) {
+              if (e.t % scaledShotInterval(112) === 0) {
                 const sideOffset = fromLeft ? 0.1 : -0.1;
                 aimedShot(e.x, e.y + 4, diffRate(1.45, 0.03), sideOffset);
                 aimedShot(e.x, e.y + 4, diffRate(1.45, 0.03), -sideOffset);
-              }
-              if (e.t % scaledShotInterval(44) === 0) {
                 for (let spread = -2; spread <= 2; spread++) {
-                  aimedShot(e.x, e.y + 8, diffRate(1.6, 0.03), spread * 0.09);
+                  aimedShot(e.x, e.y + 8, diffRate(1.55, 0.03), spread * 0.09);
                 }
               }
-              if (e.t % scaledShotInterval(56) === 0) {
-                ringBullets(e.x, e.y, scaledBulletCount(10), diffRate(0.78, 0.02), e.t * 0.05, '#7db7ff');
-              }
-              if (e.t % scaledShotInterval(92) === 0) {
-                ringBullets(e.x, e.y + 8, scaledBulletCount(12), diffRate(0.9, 0.02), -e.t * 0.04, '#9fe2ff');
+              if (e.t % scaledShotInterval(192) === 0) {
+                ringBullets(e.x, e.y + 8, scaledBulletCount(8), diffRate(0.95, 0.03), -e.t * 0.04, '#9fe2ff');
               }
             },
             draw(e) {
