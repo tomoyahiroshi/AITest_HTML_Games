@@ -41,7 +41,7 @@
 <body>
   <div class="wrap">
     <canvas id="game" width="480" height="640"></canvas>
-    <div class="help">Move: WASD / Arrow Keys ・ Shot: Space(hold) ・ Retry: R</div>
+    <div class="help">Move: WASD / Arrow Keys ・ Shot: Space(hold) ・ Select: ↑↓ + Space / Click ・ Retry: R</div>
   </div>
 
   <script>
@@ -66,6 +66,7 @@
       };
 
       const keys = Object.create(null);
+      const prevKeys = Object.create(null);
       addEventListener('keydown', (e) => {
         keys[e.code] = true;
         if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(e.code)) {
@@ -76,10 +77,30 @@
         keys[e.code] = false;
       });
 
+      const mouse = {
+        x: 0,
+        y: 0,
+        clicked: false
+      };
+      canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * W;
+        mouse.y = ((e.clientY - rect.top) / rect.height) * H;
+      });
+      canvas.addEventListener('click', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = ((e.clientX - rect.left) / rect.width) * W;
+        mouse.y = ((e.clientY - rect.top) / rect.height) * H;
+        mouse.clicked = true;
+      });
+
       const state = {
         loop: 1,
         score: 0,
         lives: 3,
+        inTitle: true,
+        menuIndex: 0,
+        debugMode: false,
         frame: 0,
         gameOver: false,
         phase: PHASE_MID_A,
@@ -101,8 +122,11 @@
         radius: 3.5,
         shootCd: 0,
         invincible: 0,
-        flash: false
+        flash: false,
+        debugInvincible: false
       };
+
+      const titleMenu = ['game Start', 'Debug Start'];
 
       for (let i = 0; i < 90; i++) {
         state.stars.push({ x: Math.random() * W, y: Math.random() * H, s: 0.5 + Math.random() * 2 });
@@ -113,11 +137,18 @@
         return baseRate * (1 + perLoop * l);
       }
 
-      function resetForRetry() {
+      function isPressed(code) {
+        return !!keys[code] && !prevKeys[code];
+      }
+
+      function beginGame(debugStart) {
         state.loop = 1;
         state.score = 0;
         state.lives = 3;
         state.gameOver = false;
+        state.inTitle = false;
+        state.menuIndex = 0;
+        state.debugMode = debugStart;
         changePhase(PHASE_MID_A);
         state.playerBullets.length = 0;
         state.enemyBullets.length = 0;
@@ -125,6 +156,11 @@
         player.x = W / 2;
         player.y = H - 80;
         player.invincible = 120;
+        player.debugInvincible = debugStart;
+      }
+
+      function resetForRetry() {
+        beginGame(state.debugMode);
       }
 
       function addScore(value) {
@@ -163,6 +199,7 @@
       }
 
       function spawnWaveA() {
+        const easyStart = state.loop === 1;
         for (let i = 0; i < 6; i++) {
           const fromLeft = i % 2 === 0;
           spawnEnemy({
@@ -175,7 +212,8 @@
               e.t++;
               e.x += fromLeft ? 2.1 : -2.1;
               e.y += Math.sin(e.t / 24) * 1.15;
-              if (e.t % Math.max(28, Math.floor(70 / diffRate(1, 0.03))) === 0) {
+              const shotInterval = easyStart ? 72 : 58;
+              if (e.t % Math.max(38, Math.floor(shotInterval / diffRate(1, 0.03))) === 0) {
                 aimedShot(e.x, e.y, diffRate(1.8, 0.03));
               }
             },
@@ -196,8 +234,10 @@
               e.t++;
               if (e.t < 50) e.y += 1.3;
               else e.y += Math.sin(e.t / 40) * 0.2;
-              if (e.t % Math.max(35, Math.floor(65 / diffRate(1, 0.03))) === 0) {
-                for (let n = -2; n <= 2; n++) aimedShot(e.x, e.y + 10, diffRate(1.4, 0.03), n * 0.16);
+              const shotInterval = easyStart ? 74 : 62;
+              if (e.t % Math.max(45, Math.floor(shotInterval / diffRate(1, 0.03))) === 0) {
+                const spreadCount = easyStart ? 1 : 2;
+                for (let n = -spreadCount; n <= spreadCount; n++) aimedShot(e.x, e.y + 10, diffRate(1.4, 0.03), n * 0.16);
               }
               if (e.t > 220) e.alive = false;
             },
@@ -430,7 +470,7 @@
         }
 
         // collision: enemy bullets vs player
-        if (!state.gameOver && player.invincible <= 0) {
+        if (!state.gameOver && player.invincible <= 0 && !player.debugInvincible) {
           for (const b of state.enemyBullets) {
             if (!b.alive) continue;
             const rr = (player.radius + b.r) ** 2;
@@ -542,6 +582,10 @@
         ctx.fillText(`LIFE ${'★'.repeat(Math.max(0, state.lives))}`, 190, 28);
         ctx.fillText(`PHASE ${phaseLabel[state.phase]}`, 270, 28);
         ctx.fillText(`LOOP ${state.loop}`, 16, 46);
+        if (state.debugMode) {
+          ctx.fillStyle = '#ffe37a';
+          ctx.fillText('DEBUG INVINCIBLE', 92, 62);
+        }
       }
 
       function renderOverlay() {
@@ -585,10 +629,86 @@
           ctx.fillStyle = '#fff';
           ctx.fillText('Press R to Retry', W / 2, H / 2 + 20);
         }
+
+        if (state.inTitle) {
+          ctx.fillStyle = 'rgba(0,0,0,0.5)';
+          ctx.fillRect(0, 0, W, H);
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'center';
+          ctx.font = 'bold 42px monospace';
+          ctx.fillText('STARLIGHT', W / 2, 170);
+          ctx.fillText('BARRAGE', W / 2, 218);
+
+          const startY = 320;
+          const itemW = 250;
+          const itemH = 52;
+          ctx.font = 'bold 24px monospace';
+
+          for (let i = 0; i < titleMenu.length; i++) {
+            const y = startY + i * 74;
+            const selected = i === state.menuIndex;
+            ctx.fillStyle = selected ? 'rgba(128,180,255,0.32)' : 'rgba(255,255,255,0.08)';
+            ctx.fillRect(W / 2 - itemW / 2, y - itemH / 2, itemW, itemH);
+            ctx.strokeStyle = selected ? '#8fd8ff' : 'rgba(255,255,255,0.35)';
+            ctx.strokeRect(W / 2 - itemW / 2, y - itemH / 2, itemW, itemH);
+            ctx.fillStyle = selected ? '#b9f2ff' : '#dce8ff';
+            ctx.fillText(titleMenu[i], W / 2, y + 8);
+          }
+
+          ctx.fillStyle = '#cdd8f7';
+          ctx.font = '14px monospace';
+          ctx.fillText('Select: ↑↓ or W/S, Start: Space / Enter / Click', W / 2, 510);
+        }
+      }
+
+      function updateTitle() {
+        const upPressed = isPressed('ArrowUp') || isPressed('KeyW');
+        const downPressed = isPressed('ArrowDown') || isPressed('KeyS');
+        const confirmPressed = isPressed('Space') || isPressed('Enter');
+
+        if (upPressed) {
+          state.menuIndex = (state.menuIndex + titleMenu.length - 1) % titleMenu.length;
+        }
+        if (downPressed) {
+          state.menuIndex = (state.menuIndex + 1) % titleMenu.length;
+        }
+
+        if (mouse.clicked) {
+          const startY = 320;
+          const itemW = 250;
+          const itemH = 52;
+          for (let i = 0; i < titleMenu.length; i++) {
+            const y = startY + i * 74;
+            const left = W / 2 - itemW / 2;
+            const right = W / 2 + itemW / 2;
+            const top = y - itemH / 2;
+            const bottom = y + itemH / 2;
+            if (mouse.x >= left && mouse.x <= right && mouse.y >= top && mouse.y <= bottom) {
+              state.menuIndex = i;
+              beginGame(i === 1);
+              break;
+            }
+          }
+          mouse.clicked = false;
+        }
+
+        if (confirmPressed) {
+          beginGame(state.menuIndex === 1);
+        }
       }
 
       function tick() {
         state.frame++;
+
+        if (state.inTitle) {
+          updateTitle();
+          render();
+          for (const code of ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS', 'Space', 'Enter']) {
+            prevKeys[code] = !!keys[code];
+          }
+          requestAnimationFrame(tick);
+          return;
+        }
 
         if (state.gameOver) {
           if (keys.KeyR) resetForRetry();
@@ -601,6 +721,10 @@
         updatePhase();
         updateEntities();
         render();
+
+        for (const code of ['ArrowUp', 'ArrowDown', 'KeyW', 'KeyS', 'Space', 'Enter']) {
+          prevKeys[code] = !!keys[code];
+        }
 
         requestAnimationFrame(tick);
       }
