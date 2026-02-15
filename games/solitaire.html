@@ -73,7 +73,7 @@
       top: 3px;
     }
     .pile.waste {
-      width: calc(var(--card-w) + clamp(66px, 8vw, 112px));
+      width: calc((var(--card-w) - 6px) + clamp(66px, 8vw, 112px));
       min-width: var(--card-w);
     }
     .pile.waste .card {
@@ -845,7 +845,8 @@
       const wasteOffset = Math.max(16, Math.round(cardWidth * 0.32));
       const tableauOffset = Math.max(16, Math.round(cardHeight * 0.19));
       const wasteVisibleCards = 5;
-      wasteEl.style.width = `${cardWidth + (wasteVisibleCards - 1) * wasteOffset}px`;
+      const visibleCardWidth = cardWidth - 6;
+      wasteEl.style.width = `${visibleCardWidth + (wasteVisibleCards - 1) * wasteOffset}px`;
 
       if (state.status === "CLEAR") {
         promptRestartAfterGameClear();
