@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>数独</title>
+  <style>
+    body{font-family:Arial,sans-serif;background:#f4f7fb;margin:0;padding:20px;display:grid;place-items:center}
+    .app{background:#fff;padding:20px;border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.1);max-width:560px;width:100%}
+    h1{margin:0 0 12px}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+    button,select{padding:8px 10px}
+    .grid{display:grid;grid-template-columns:repeat(9,1fr);gap:0;border:2px solid #222}
+    .cell{width:100%;aspect-ratio:1;border:1px solid #ccc;text-align:center;font-size:20px}
+    .cell.given{background:#e9efff;font-weight:bold}
+    .cell.err{background:#ffd9d9}
+    .status{margin-top:10px;font-weight:bold}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <h1>数独</h1>
+    <div class="controls">
+      <select id="difficulty">
+        <option value="35">Easy</option>
+        <option value="45" selected>Medium</option>
+        <option value="55">Hard</option>
+      </select>
+      <button id="newGame">新規ゲーム</button>
+      <button id="check">答え合わせ</button>
+      <button id="reset">リセット</button>
+    </div>
+    <div id="grid" class="grid"></div>
+    <div id="status" class="status">進行中</div>
+  </div>
+  <script>
+    const gridEl = document.getElementById('grid');
+    const statusEl = document.getElementById('status');
+    const difficultyEl = document.getElementById('difficulty');
+    let solution = [], puzzle = [], initial = [];
+
+    function shuffled(nums){ return [...nums].sort(()=>Math.random()-0.5); }
+    function valid(board,r,c,n){
+      for(let i=0;i<9;i++) if(board[r][i]===n || board[i][c]===n) return false;
+      const br=Math.floor(r/3)*3, bc=Math.floor(c/3)*3;
+      for(let i=0;i<3;i++) for(let j=0;j<3;j++) if(board[br+i][bc+j]===n) return false;
+      return true;
+    }
+    function fill(board){
+      for(let r=0;r<9;r++) for(let c=0;c<9;c++) if(board[r][c]===0){
+        for(const n of shuffled([1,2,3,4,5,6,7,8,9])){
+          if(valid(board,r,c,n)){ board[r][c]=n; if(fill(board)) return true; board[r][c]=0; }
+        }
+        return false;
+      }
+      return true;
+    }
+    function makePuzzle(emptyCount){
+      const b = Array.from({length:9},()=>Array(9).fill(0));
+      fill(b);
+      solution = b.map(r=>[...r]);
+      puzzle = b.map(r=>[...r]);
+      let removed=0;
+      while(removed<emptyCount){
+        const r=Math.floor(Math.random()*9), c=Math.floor(Math.random()*9);
+        if(puzzle[r][c]!==0){puzzle[r][c]=0;removed++;}
+      }
+      initial = puzzle.map(r=>[...r]);
+    }
+    function render(){
+      gridEl.innerHTML='';
+      for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+        const input=document.createElement('input');
+        input.className='cell';
+        if(c===2||c===5) input.style.borderRight='2px solid #222';
+        if(r===2||r===5) input.style.borderBottom='2px solid #222';
+        const v=puzzle[r][c];
+        if(v){ input.value=v; input.disabled=true; input.classList.add('given'); }
+        input.maxLength=1;
+        input.addEventListener('input',()=>{
+          input.classList.remove('err');
+          const val = input.value.replace(/[^1-9]/g,'');
+          input.value=val;
+          puzzle[r][c]=val?Number(val):0;
+          statusEl.textContent='進行中';
+        });
+        gridEl.appendChild(input);
+      }
+    }
+    function check(){
+      const cells=[...document.querySelectorAll('.cell')];
+      cells.forEach(c=>c.classList.remove('err'));
+      let ok=true, complete=true;
+      for(let r=0;r<9;r++) for(let c=0;c<9;c++){
+        const idx=r*9+c;
+        if(!puzzle[r][c]){complete=false;ok=false;continue;}
+        if(puzzle[r][c]!==solution[r][c]){ok=false;cells[idx].classList.add('err');}
+      }
+      statusEl.textContent = ok&&complete ? 'クリア！' : '誤りまたは未入力があります';
+    }
+    function reset(){ puzzle=initial.map(r=>[...r]); render(); statusEl.textContent='進行中'; }
+    function newGame(){ makePuzzle(Number(difficultyEl.value)); render(); statusEl.textContent='進行中'; }
+    document.getElementById('newGame').onclick=newGame;
+    document.getElementById('check').onclick=check;
+    document.getElementById('reset').onclick=reset;
+    newGame();
+  </script>
+</body>
+</html>
