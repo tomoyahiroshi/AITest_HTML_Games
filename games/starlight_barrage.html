@@ -56,6 +56,11 @@
       const PHASE_MID_B = 'PHASE_MID_B';
       const PHASE_STAGE_BOSS = 'PHASE_STAGE_BOSS';
       const PHASE_CLEAR_TRANSITION = 'PHASE_CLEAR_TRANSITION';
+      const MID_AB_DURATION_SCALE = 1.5;
+
+      function midABFrame(baseFrame) {
+        return Math.round(baseFrame * MID_AB_DURATION_SCALE);
+      }
 
       function phaseLabel(phase) {
         if (phase === PHASE_MID_A) return `LOOP ${state.loop} AREA A`;
@@ -853,11 +858,11 @@
         state.phaseFrame++;
 
         if (state.phase === PHASE_MID_A) {
-          if (state.phaseFrame === 20 || state.phaseFrame === 400) spawnWaveB();
-          if (state.phaseFrame === 140 || state.phaseFrame === 520) spawnWaveC();
-          if (state.phaseFrame === 640 || state.phaseFrame === 760) spawnWaveBMix();
-          if (state.phaseFrame > 960 && state.midBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
-            state.midBossSpawnTimer = 75;
+          if (state.phaseFrame === midABFrame(20) || state.phaseFrame === midABFrame(400)) spawnWaveB();
+          if (state.phaseFrame === midABFrame(140) || state.phaseFrame === midABFrame(520)) spawnWaveC();
+          if (state.phaseFrame === midABFrame(640) || state.phaseFrame === midABFrame(760)) spawnWaveBMix();
+          if (state.phaseFrame > midABFrame(960) && state.midBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
+            state.midBossSpawnTimer = midABFrame(75);
           }
           if (state.midBossSpawnTimer >= 0) {
             state.midBossSpawnTimer--;
@@ -871,12 +876,12 @@
             changePhase(PHASE_MID_B);
           }
         } else if (state.phase === PHASE_MID_B) {
-          if (state.phaseFrame === 40 || state.phaseFrame === 360) spawnWaveA();
-          if (state.phaseFrame === 220) spawnWaveAAlt();
-          if (state.phaseFrame === 130) spawnWaveAFormationSweep();
-          if (state.phaseFrame === 500) spawnWaveAFormationDrop();
-          if (state.phaseFrame > 620 && state.stageBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
-            state.stageBossSpawnTimer = 90;
+          if (state.phaseFrame === midABFrame(40) || state.phaseFrame === midABFrame(360)) spawnWaveA();
+          if (state.phaseFrame === midABFrame(220)) spawnWaveAAlt();
+          if (state.phaseFrame === midABFrame(130)) spawnWaveAFormationSweep();
+          if (state.phaseFrame === midABFrame(500)) spawnWaveAFormationDrop();
+          if (state.phaseFrame > midABFrame(620) && state.stageBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
+            state.stageBossSpawnTimer = midABFrame(90);
           }
           if (state.stageBossSpawnTimer >= 0) {
             state.stageBossSpawnTimer--;
