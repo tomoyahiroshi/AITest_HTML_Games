@@ -302,21 +302,82 @@
       function spawnWaveAAlt() {
         spawnDiverLine();
         for (let i = 0; i < 4; i++) {
+          const fromLeft = i % 2 === 0;
+          const retreatVx = fromLeft ? -2.3 : 2.3;
           spawnEnemy({
             type: 'striker',
-            x: i % 2 === 0 ? -28 : W + 28,
+            x: fromLeft ? -28 : W + 28,
             y: 85 + i * 50,
             hp: Math.floor(diffRate(6, 0.05)),
             value: 140,
             update(e) {
               e.t++;
-              const angle = Math.atan2(player.y - e.y, player.x - e.x);
-              e.x += Math.cos(angle) * 1.25;
-              e.y += Math.sin(angle) * 1.25;
-              if (e.t % scaledShotInterval(60) === 0) aimedShot(e.x, e.y, diffRate(1.6, 0.03));
+              const trackingWindow = 600;
+              if (e.t <= trackingWindow) {
+                const angle = Math.atan2(player.y - e.y, player.x - e.x);
+                e.x += Math.cos(angle) * 1.25;
+                e.y += Math.sin(angle) * 1.25;
+                if (e.t % scaledShotInterval(60) === 0) aimedShot(e.x, e.y, diffRate(1.6, 0.03));
+              } else {
+                e.x += retreatVx;
+                e.y -= 2.2;
+              }
             },
             draw(e) {
               drawAscii([' v ', '<x>'], e.x, e.y, '#b8ffcf', 14);
+            }
+          });
+        }
+      }
+
+      function spawnWaveAFormationSweep() {
+        const columns = 5;
+        for (let i = 0; i < columns * 2; i++) {
+          const row = Math.floor(i / columns);
+          const col = i % columns;
+          spawnEnemy({
+            type: 'midAFormationSweep',
+            x: row === 0 ? -45 - col * 26 : W + 45 + col * 26,
+            y: 110 + col * 40,
+            hp: Math.floor(diffRate(5, 0.05)),
+            value: 170,
+            update(e) {
+              e.t++;
+              const dir = row === 0 ? 1 : -1;
+              e.x += dir * 2.15;
+              e.y += Math.sin((e.t + col * 18) / 20) * 0.7;
+              if (e.t % scaledShotInterval(96) === 0) {
+                aimedShot(e.x, e.y, diffRate(1.45, 0.03), dir * 0.05);
+              }
+            },
+            draw(e) {
+              drawAscii([' + ', '/#\\'], e.x, e.y, '#ffb5f3', 13);
+            }
+          });
+        }
+      }
+
+      function spawnWaveAFormationDrop() {
+        for (let i = 0; i < 12; i++) {
+          const row = Math.floor(i / 4);
+          const col = i % 4;
+          spawnEnemy({
+            type: 'midAFormationDrop',
+            x: 80 + col * 105,
+            y: -35 - row * 36,
+            hp: Math.floor(diffRate(4, 0.05)),
+            value: 165,
+            update(e) {
+              e.t++;
+              e.y += 1.8;
+              e.x += Math.sin((e.t + row * 20) / 15) * 1.15;
+              if (e.t % scaledShotInterval(84) === 0) {
+                const spread = (col - 1.5) * 0.06;
+                aimedShot(e.x, e.y, diffRate(1.35, 0.03), spread);
+              }
+            },
+            draw(e) {
+              drawAscii(['[+]', ' v '], e.x, e.y, '#ff9ac9', 13);
             }
           });
         }
@@ -564,6 +625,8 @@
         if (state.phase === PHASE_MID_A) {
           if (state.phaseFrame === 20 || state.phaseFrame === 340) spawnWaveA();
           if (state.phaseFrame === 180 || state.phaseFrame === 500) spawnWaveAAlt();
+          if (state.phaseFrame === 100 || state.phaseFrame === 420) spawnWaveAFormationSweep();
+          if (state.phaseFrame === 260 || state.phaseFrame === 580) spawnWaveAFormationDrop();
           if (state.phaseFrame > 680 && state.enemies.filter((e) => e.alive).length === 0) {
             changePhase(PHASE_MID_BOSS);
             spawnMidBoss();
