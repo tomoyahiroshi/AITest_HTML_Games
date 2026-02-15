@@ -53,6 +53,9 @@ function updateCellSize(){
 
 function showConfirmDialog(message){
   if(typeof confirmDialogEl.showModal!=='function')return Promise.resolve(window.confirm(message));
+  confirmCancelEl.hidden=false;
+  confirmCancelEl.textContent='キャンセル';
+  confirmOkEl.textContent='実行する';
   confirmMessageEl.textContent=message;
   confirmDialogEl.showModal();
   return new Promise((resolve)=>{
@@ -62,6 +65,20 @@ function showConfirmDialog(message){
     confirmCancelEl.addEventListener('click',onCancel);
     confirmOkEl.addEventListener('click',onOk);
   });
+}
+
+function showResultDialog(message){
+  if(typeof confirmDialogEl.showModal!=='function'){
+    window.alert(message);
+    return;
+  }
+  confirmCancelEl.hidden=true;
+  confirmOkEl.textContent='OK';
+  confirmMessageEl.textContent=message;
+  confirmDialogEl.showModal();
+  const onOk=()=>{cleanup();confirmDialogEl.close();};
+  const cleanup=()=>{confirmOkEl.removeEventListener('click',onOk);};
+  confirmOkEl.addEventListener('click',onOk);
 }
 
 function startTimer(){clearInterval(tid);tid=setInterval(()=>{if(!gameOver){timer++;timeEl.textContent=timer;}},1000);}
@@ -85,7 +102,7 @@ if(cell.count)el.textContent=cell.count;else{const q=[[r,c]];while(q.length){con
 checkWin();}
 function toggleFlag(e,r,c){e.preventDefault();const cell=grid[r][c];if(cell.open||gameOver)return;cell.flag=!cell.flag;cell.el.classList.toggle('flag',cell.flag);cell.el.textContent=cell.flag?'🚩':'';flags+=cell.flag?1:-1;remainEl.textContent=mines-flags;}
 function lose(){gameOver=true;statusEl.textContent='ゲームオーバー';clearInterval(tid);for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)if(grid[r][c].mine&&!grid[r][c].open){grid[r][c].el.textContent='💣';grid[r][c].el.classList.add('mine');}}
-function checkWin(){if(opened===rows*cols-mines){gameOver=true;statusEl.textContent='クリア！';clearInterval(tid);}}
+function checkWin(){if(opened===rows*cols-mines){gameOver=true;statusEl.textContent='クリア！';clearInterval(tid);showResultDialog(`クリア！ 記録: ${timer}秒`);}}
 function startNewGame(){[rows,cols,mines]=difficultyEl.value.split(',').map(Number);grid=Array.from({length:rows},()=>Array.from({length:cols},()=>({mine:false,open:false,flag:false,count:0,el:null})));
 board.innerHTML='';first=true;flags=0;opened=0;timer=0;gameOver=false;timeEl.textContent='0';remainEl.textContent=mines;statusEl.textContent='進行中';clearInterval(tid);
 for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){const b=document.createElement('button');b.className='cell';b.onclick=()=>reveal(r,c);b.oncontextmenu=(e)=>toggleFlag(e,r,c);grid[r][c].el=b;board.appendChild(b);} 
