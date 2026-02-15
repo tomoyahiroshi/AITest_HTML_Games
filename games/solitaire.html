@@ -408,7 +408,12 @@
 
     function onPileClicked(type, index) {
       if (state.status !== "PLAYING") return;
-      if (!selection) return;
+      if (!selection) {
+        if (type === "waste" && state.waste.length > 0) {
+          onCardClicked("waste", index, state.waste.length - 1);
+        }
+        return;
+      }
       tryMoveTo(type, index);
     }
 
