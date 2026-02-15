@@ -178,8 +178,7 @@
       }
 
       function scaledBossShotInterval(baseInterval) {
-        const effectiveLoop = Math.max(state.loop, 3);
-        const intensity = 0.1 + (effectiveLoop - 1) * 0.1;
+        const intensity = Math.min(1.2, 0.55 + (state.loop - 1) * 0.08);
         return Math.max(8, Math.floor(baseInterval / intensity));
       }
 
@@ -749,6 +748,16 @@
             const p = e.hp / e.maxHp;
             const phase = p > 0.66 ? 1 : p > 0.33 ? 2 : 3;
             const speed = diffRate(1.45, 0.03);
+            const opening = e.t < 180;
+
+            if (opening && bossAttackTick(e, 22)) {
+              for (let i = -2; i <= 2; i++) {
+                aimedShot(e.x, e.y + 8, speed + 0.6, i * 0.08);
+              }
+            }
+            if (opening && bossAttackTick(e, 48)) {
+              ringBullets(e.x, e.y + 6, scaledBulletCount(9), speed, e.t * 0.07, '#ffb46e');
+            }
 
             if (variant === 0) {
               e.x = W / 2 + Math.sin(e.t / 75) * 150;
