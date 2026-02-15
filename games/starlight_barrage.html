@@ -133,12 +133,16 @@
       const player = {
         x: W / 2,
         y: H - 80,
+        targetY: H - 80,
         speed: 4,
         radius: 3.5,
         shootCd: 0,
         invincible: 0,
         flash: false,
-        debugInvincible: false
+        debugInvincible: false,
+        respawnState: 'active',
+        respawnTimer: 0,
+        respawnEnterDuration: 52
       };
 
       const ENEMY_HIT_RADIUS = {
@@ -204,9 +208,11 @@
         state.enemyBullets.length = 0;
         state.enemies.length = 0;
         player.x = W / 2;
-        player.y = H - 80;
+        player.y = player.targetY;
         player.invincible = 120;
         player.debugInvincible = debugStart;
+        player.respawnState = 'active';
+        player.respawnTimer = 0;
       }
 
       function resetForRetry() {
@@ -412,12 +418,17 @@
       }
 
       function spawnWaveAColumnRush() {
-        const laneXs = [90, 170, 250, 330, 410];
-        for (let i = 0; i < laneXs.length; i++) {
+        const candidates = [50, 90, 130, 170, 210, 250, 290, 330, 370, 410, 450]
+          .sort(() => Math.random() - 0.5);
+        const laneCount = 8;
+        for (let i = 0; i < laneCount; i++) {
+          const baseLane = candidates[i % candidates.length];
+          const laneX = clamp(baseLane + (Math.random() - 0.5) * 24, 38, W - 38);
+          const startY = -28 - i * (18 + Math.random() * 20);
           spawnEnemy({
             type: 'midAColumnRush',
-            x: laneXs[i],
-            y: -28 - i * 26,
+            x: laneX,
+            y: startY,
             hp: 1,
             value: 120,
             update(e) {
@@ -900,7 +911,69 @@
         }
       }
 
+      function triggerPlayerDown() {
+        const deathX = player.x;
+        const deathY = player.y;
+        state.lives--;
+        spawnExplosion(deathX, deathY, {
+          count: 72,
+          speed: 4.9,
+          life: 68,
+          radius: 4.8,
+          gravity: 0.01,
+          colors: ['#ffffff', '#ffd9f3', '#ff8ec9', '#92beff']
+        });
+        spawnExplosion(deathX, deathY, {
+          count: 40,
+          speed: 3.2,
+          spread: 1.4,
+          life: 48,
+          radius: 3.3,
+          gravity: 0,
+          colors: ['#9ed8ff', '#b4a4ff', '#fff2be']
+        });
+
+        state.enemyBullets.length = 0;
+        if (state.lives <= 0) {
+          state.gameOver = true;
+          player.respawnState = 'waiting';
+          player.respawnTimer = 0;
+          return;
+        }
+
+        player.respawnState = 'waiting';
+        player.respawnTimer = 45;
+        player.flash = false;
+        player.invincible = 0;
+      }
+
       function updatePlayer() {
+        if (player.respawnState === 'waiting') {
+          if (player.respawnTimer > 0) {
+            player.respawnTimer--;
+          } else {
+            player.respawnState = 'entering';
+            player.respawnTimer = player.respawnEnterDuration;
+            player.x = W / 2;
+            player.y = H + 46;
+            player.invincible = player.respawnEnterDuration + 90;
+          }
+          return;
+        }
+
+        if (player.respawnState === 'entering') {
+          const t = 1 - player.respawnTimer / Math.max(1, player.respawnEnterDuration);
+          const eased = 1 - (1 - t) * (1 - t);
+          player.y = H + 46 + (player.targetY - (H + 46)) * eased;
+          player.respawnTimer--;
+          if (player.respawnTimer <= 0) {
+            player.respawnState = 'active';
+            player.y = player.targetY;
+          }
+          if (player.invincible > 0) player.invincible--;
+          return;
+        }
+
         const left = keys.KeyA || keys.ArrowLeft;
         const right = keys.KeyD || keys.ArrowRight;
         const up = keys.KeyW || keys.ArrowUp;
@@ -914,6 +987,7 @@
 
         player.x = clamp(player.x + dx * player.speed, 20, W - 20);
         player.y = clamp(player.y + dy * player.speed, 30, H - 25);
+        player.targetY = H - 80;
 
         if (player.shootCd > 0) player.shootCd--;
         if ((keys.Space || keys.KeyJ) && player.shootCd <= 0 && !state.gameOver) {
@@ -1052,35 +1126,13 @@
         }
 
         // collision: enemy bullets vs player
-        if (!state.gameOver && player.invincible <= 0 && !player.debugInvincible) {
+        if (!state.gameOver && player.respawnState === 'active' && player.invincible <= 0 && !player.debugInvincible) {
           for (const b of state.enemyBullets) {
             if (!b.alive) continue;
             const rr = (player.radius + b.r) ** 2;
             if (distanceSq(player, b) <= rr) {
               b.alive = false;
-              state.lives--;
-              spawnExplosion(player.x, player.y, {
-                count: 36,
-                speed: 3.3,
-                life: 44,
-                radius: 3.1,
-                gravity: 0.015,
-                colors: ['#b3d7ff', '#ffffff', '#8fa9ff']
-              });
-              player.invincible = 120;
-              player.x = W / 2;
-              player.y = H - 80;
-              state.enemyBullets.length = 0;
-              if (state.lives <= 0) {
-                state.gameOver = true;
-                spawnExplosion(player.x, player.y, {
-                  count: 70,
-                  speed: 4.4,
-                  life: 62,
-                  radius: 4.2,
-                  colors: ['#ffffff', '#ffd2e0', '#ff8ebc', '#9db8ff']
-                });
-              }
+              triggerPlayerDown();
               break;
             }
           }
@@ -1188,19 +1240,25 @@
         }
         ctx.globalAlpha = 1;
 
-        if (!(player.invincible > 0 && (Math.floor(state.frame / 6) % 2 === 0))) {
+        if (player.respawnState !== 'waiting' && !(player.invincible > 0 && (Math.floor(state.frame / 6) % 2 === 0))) {
+          const bodyColor = player.respawnState === 'entering' ? '#9fe7ff' : '#e4ecff';
           drawAscii([
             player.flash ? ' * ' : ' ^ ',
             '<A>',
             '/|\\'
-          ], player.x, player.y, '#e4ecff', 15);
+          ], player.x, player.y, bodyColor, 15);
+          if (player.respawnState === 'entering') {
+            drawAscii([' | ', '/V\\'], player.x, player.y + 19, '#8db9ff', 12);
+          }
         }
 
         // hitbox marker
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(player.x, player.y + 1, player.radius, 0, Math.PI * 2);
-        ctx.fill();
+        if (player.respawnState !== 'waiting') {
+          ctx.fillStyle = '#fff';
+          ctx.beginPath();
+          ctx.arc(player.x, player.y + 1, player.radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
 
         renderHud();
         renderOverlay();
