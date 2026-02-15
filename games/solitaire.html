@@ -419,6 +419,25 @@
       return null;
     }
 
+    function tryAutoMoveFromCard(type, index, cardPos) {
+      const autoDest = findAutoMoveDestination(type, index, cardPos);
+      if (!autoDest) return false;
+
+      const next = applyMove(state, {
+        type: "pileMove",
+        source: { type, index },
+        startPos: cardPos,
+        dest: autoDest,
+      });
+      if (next === state) return false;
+
+      state = next;
+      selection = null;
+      setMessage("");
+      render();
+      return true;
+    }
+
     function tryMoveTo(destType, destIndex) {
       if (!selection || state.status !== "PLAYING") return;
       const src = selection.source;
@@ -443,22 +462,6 @@
       if (state.status !== "PLAYING") return;
       if (!selection) {
         if (!selectableCard(type, index, cardPos)) return;
-
-        const autoDest = findAutoMoveDestination(type, index, cardPos);
-        if (autoDest) {
-          const next = applyMove(state, {
-            type: "pileMove",
-            source: { type, index },
-            startPos: cardPos,
-            dest: autoDest,
-          });
-          if (next !== state) {
-            state = next;
-            setMessage("");
-            render();
-            return;
-          }
-        }
 
         selection = buildSelection(type, index, cardPos);
         setMessage("");
@@ -536,6 +539,14 @@
         event.stopPropagation();
         onCardClicked(type, pileIndex, cardPos);
       });
+
+      if (type !== "stock") {
+        div.addEventListener("dblclick", (event) => {
+          event.stopPropagation();
+          if (!selectableCard(type, pileIndex, cardPos)) return;
+          tryAutoMoveFromCard(type, pileIndex, cardPos);
+        });
+      }
 
       const isDraggable = state.status === "PLAYING" && selectableCard(type, pileIndex, cardPos);
       div.draggable = isDraggable;
