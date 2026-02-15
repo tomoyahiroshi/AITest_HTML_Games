@@ -271,7 +271,7 @@
             type: 'skirmisher',
             x: fromLeft ? -30 : W + 30,
             y: yStart + i * 34,
-            hp: Math.floor(diffRate(4, 0.05)),
+            hp: 1,
             value: 110,
             update(e) {
               e.t++;
@@ -343,7 +343,7 @@
             type: 'diver',
             x: 45 + i * 55,
             y: -20 - i * 16,
-            hp: Math.floor(diffRate(5, 0.05)),
+            hp: 1,
             value: 150,
             update(e) {
               e.t++;
@@ -374,7 +374,7 @@
             type: 'striker',
             x: fromLeft ? -28 : W + 28,
             y: 85 + i * 50,
-            hp: Math.floor(diffRate(6, 0.05)),
+            hp: 1,
             value: 140,
             update(e) {
               e.t++;
@@ -405,7 +405,7 @@
             type: 'midAFormationSweep',
             x: row === 0 ? -45 - col * 26 : W + 45 + col * 26,
             y: 110 + col * 40,
-            hp: Math.floor(diffRate(5, 0.05)),
+            hp: 1,
             value: 170,
             update(e) {
               e.t++;
@@ -431,7 +431,7 @@
             type: 'midAFormationDrop',
             x: 80 + col * 105,
             y: -35 - row * 36,
-            hp: Math.floor(diffRate(4, 0.05)),
+            hp: 1,
             value: 165,
             update(e) {
               e.t++;
@@ -457,7 +457,7 @@
             type: 'formation',
             x: fromLeft ? -30 - row * 24 : W + 30 + row * 24,
             y: 110 + row * 45,
-            hp: Math.floor(diffRate(5, 0.05)),
+            hp: 1,
             value: 150,
             update(e) {
               e.t++;
@@ -480,7 +480,7 @@
             type: 'formationAlt',
             x: 30 + (i % 6) * 82,
             y: -20 - Math.floor(i / 6) * 95,
-            hp: Math.floor(diffRate(4, 0.05)),
+            hp: 1,
             value: 180,
             update(e) {
               e.t++;
@@ -503,7 +503,7 @@
             type: 'midBMixSkirm',
             x: i % 2 === 0 ? -24 : W + 24,
             y: 85 + i * 42,
-            hp: Math.floor(diffRate(5, 0.05)),
+            hp: 1,
             value: 170,
             update(e) {
               e.t++;
@@ -531,14 +531,17 @@
             value: 420,
             update(e) {
               e.t++;
-              e.x += fromLeft ? 1.55 : -1.55;
-              e.y += Math.sin((e.t + i * 30) / 24) * 0.42;
-              if (e.t % scaledShotInterval(64) === 0) {
-                ringBullets(e.x, e.y, scaledBulletCount(5), diffRate(1.1, 0.03), e.t * 0.07, '#7db7ff');
+              e.x += fromLeft ? 0.68 : -0.68;
+              e.y += Math.sin((e.t + i * 30) / 32) * 0.22;
+              if (e.t % scaledShotInterval(56) === 0) {
+                ringBullets(e.x, e.y, scaledBulletCount(10), diffRate(0.78, 0.02), e.t * 0.05, '#7db7ff');
+              }
+              if (e.t % scaledShotInterval(92) === 0) {
+                ringBullets(e.x, e.y + 8, scaledBulletCount(12), diffRate(0.9, 0.02), -e.t * 0.04, '#9fe2ff');
               }
             },
             draw(e) {
-              drawAscii(['[M]', '/|\\'], e.x, e.y, '#7fbeff', 15);
+              drawAscii([' /MMM\\ ', '<|##|>', ' \\__/ '], e.x, e.y, '#7fbeff', 16);
             }
           });
         }
@@ -621,14 +624,14 @@
           },
           draw(e) {
             const sprites = [
-              [' [###] ', '/{@}@\\', ' /|||\\ '],
-              [' /MMM\\ ', '<(o_o)>', ' \\_|_/ '],
-              [' <%%%> ', '[{* *}]', ' /|||\\ '],
-              [' [***] ', '<{^_^}>', ' \\|||/ '],
-              [' /###\\ ', '<{o_o}>', ' /WWW\\ ']
+              ['   /##@@##\\   ', ' <=={::::}==> ', '<###| /\\ |###>', '  \\__\\__/__/  '],
+              ['   /MMMMMM\\   ', ' <==((oo))==> ', '<|||<|==|>|||>', '  \\___/\\___/  '],
+              ['   <%%%%%%>   ', ' <=={*..*}==> ', '<###( /\\ )###>', '  /___/||\\___\\ '],
+              ['   [******]   ', ' <=={^__^}==> ', '<|||</==\\>|||>', '  \\___\\__/___/  '],
+              ['   /######\\   ', ' <=={o  o}==> ', '<WWW< /\\ >WWW>', '  /___/____\\___\\ ']
             ];
             const colors = ['#ffd17f', '#9ae7ff', '#ff9fd1', '#9effc9', '#ffc39b'];
-            drawAscii(sprites[variant], e.x, e.y, colors[variant], 17);
+            drawAscii(sprites[variant], e.x, e.y, colors[variant], 23);
             drawBossHp(e.hp, e.maxHp, '#ffc266', 'MID BOSS');
           }
         });
@@ -748,14 +751,14 @@
           },
           draw(e) {
             const sprites = [
-              ['  ==#@@#==  ', ' /%%@@@@%%\\ ', '<###||||###>', ' \\__====__/ '],
-              ['  //##\\  ', ' <@@**@@> ', '<||====||>', '  \\_==_/  '],
-              ['  [[@@]]  ', '<##/\\/##>', '<||::::||>', '  \\_--_/  '],
-              ['  <<==>>  ', '<@@||||@@>', '<##====##>', '  /____\\  '],
-              ['  {####}  ', '<@/----\\@>', '<||++++||>', '  \\____/  ']
+              ['    ==##@@##==    ', '  /%%%@@@@@@%%%\\  ', '<####|  /\\  |####>', '<@@@@| <==> |@@@@>', '  \\___\\____/___/  '],
+              ['    //####\\\\    ', '  <@@@**@@**@@@>  ', '<|||||<====>|||||>', '<####| /__\\ |####>', '   \\____==____/   '],
+              ['    [[@@##@@]]    ', '  <##</\\  /\\>##>  ', '<||||<::::::>||||>', '<####(  /\\  )####>', '   /____----____\\   '],
+              ['    <<==@@==>>    ', '  <@@|| /\\ ||@@>  ', '<####<=====>####>', '<||||| /__\\ |||||>', '   /____====____\\   '],
+              ['    {####@@####}    ', '  <@@/--/\\--\\@@>  ', '<||||<++++++>||||>', '<WWWW( /__\\ )WWWW>', '   \\____====____/   ']
             ];
             const colors = ['#ff97ba', '#8fd4ff', '#ffbf7a', '#9ef7d8', '#d3a2ff'];
-            drawAscii(sprites[variant], e.x, e.y, colors[variant], 18);
+            drawAscii(sprites[variant], e.x, e.y, colors[variant], 24);
             drawBossHp(e.hp, e.maxHp, '#ff87b3', 'STAGE BOSS');
           }
         });
@@ -835,7 +838,7 @@
         } else if (state.phase === PHASE_MID_B) {
           if (state.phaseFrame === 20 || state.phaseFrame === 400) spawnWaveB();
           if (state.phaseFrame === 140 || state.phaseFrame === 520) spawnWaveC();
-          if (state.phaseFrame === 270 || state.phaseFrame === 640) spawnWaveBMix();
+          if (state.phaseFrame === 640 || state.phaseFrame === 760) spawnWaveBMix();
           if (state.phaseFrame > 960 && state.stageBossSpawnTimer < 0 && state.phaseEnemySpawned > 0) {
             state.stageBossSpawnTimer = 90;
           }
