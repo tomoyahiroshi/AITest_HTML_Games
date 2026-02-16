@@ -11,6 +11,7 @@
 - マインスイーパー（Minesweeper）
 - ソリティア（Klondike）
 - スターライト・バラージュ（Shooting）
+- リバーシ（Reversi）
 
 ## 構成
 - `index.html`: ゲーム一覧ページ

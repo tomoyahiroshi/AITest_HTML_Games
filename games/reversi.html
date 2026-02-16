@@ -1,0 +1,564 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>リバーシ（CPU対戦）</title>
+  <style>
+    :root{
+      --bg:#0f172a;
+      --panel:#111827;
+      --panel-soft:#1f2937;
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+      --board:#0b7a33;
+      --board-line:#064e1d;
+      --accent:#22c55e;
+      --warn:#f59e0b;
+      --danger:#f87171;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:"Segoe UI",system-ui,-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;
+      color:var(--text);
+      background:radial-gradient(circle at top right,#1d4ed855,transparent 40%),var(--bg);
+      min-height:100dvh;
+      padding:20px;
+      display:flex;
+      justify-content:center;
+    }
+    .wrap{width:min(980px,100%);display:grid;gap:16px}
+    .panel{background:var(--panel);border:1px solid #334155;border-radius:12px;padding:14px}
+    h1{margin:0 0 10px;font-size:clamp(24px,3vw,34px)}
+    .settings{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));align-items:end}
+    label{display:grid;gap:6px;font-size:14px;color:var(--muted)}
+    select,button{
+      border-radius:10px;
+      border:1px solid #475569;
+      background:var(--panel-soft);
+      color:var(--text);
+      padding:9px 10px;
+      font-size:15px;
+    }
+    button{cursor:pointer;font-weight:700}
+    button:hover{filter:brightness(1.08)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap}
+    #startBtn{background:#15803d}
+    #restartBtn{background:#1e293b}
+
+    .main{display:grid;gap:16px;grid-template-columns:minmax(320px,520px) 1fr;align-items:start}
+    @media (max-width:860px){.main{grid-template-columns:1fr}}
+
+    #board{
+      background:var(--board);
+      border:4px solid #14532d;
+      border-radius:10px;
+      padding:6px;
+      display:grid;
+      grid-template-columns:repeat(8,1fr);
+      gap:2px;
+      width:min(88vw,520px);
+      aspect-ratio:1/1;
+      margin-inline:auto;
+    }
+    .cell{
+      background:#0a6f2d;
+      border:1px solid var(--board-line);
+      position:relative;
+      cursor:pointer;
+      padding:0;
+      min-width:0;
+    }
+    .cell:hover{background:#0f8d3a}
+    .cell.valid::after{
+      content:"";
+      position:absolute;
+      inset:35%;
+      border-radius:50%;
+      background:#d9f99d88;
+    }
+    .disc{
+      position:absolute;
+      inset:11%;
+      border-radius:50%;
+      box-shadow:inset -4px -5px 10px #00000044,0 2px 4px #00000066;
+    }
+    .disc.black{background:linear-gradient(145deg,#111827,#030712)}
+    .disc.white{background:linear-gradient(145deg,#ffffff,#d1d5db)}
+
+    .info{display:grid;gap:10px}
+    .cards{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+    .card{background:var(--panel-soft);border:1px solid #334155;border-radius:10px;padding:10px 12px}
+    .k{font-size:13px;color:var(--muted)}
+    .v{font-size:22px;font-weight:700}
+    #message{min-height:2.4em;font-weight:700;line-height:1.4}
+    .msg-warn{color:var(--warn)}
+    .msg-danger{color:var(--danger)}
+    .msg-ok{color:var(--accent)}
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <h1>リバーシ（CPU対戦）</h1>
+      <div class="settings">
+        <label>難易度
+          <select id="difficulty">
+            <option value="0">最弱</option>
+            <option value="1">弱</option>
+            <option value="2" selected>中</option>
+            <option value="3">強</option>
+            <option value="4">最強</option>
+          </select>
+        </label>
+        <label>先攻 / 後攻
+          <select id="order">
+            <option value="first" selected>プレイヤー先攻（黒）</option>
+            <option value="second">プレイヤー後攻（白）</option>
+          </select>
+        </label>
+        <div class="actions">
+          <button id="startBtn">対局開始</button>
+          <button id="restartBtn">リスタート</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="main">
+      <div class="panel">
+        <div id="board" aria-label="リバーシ盤面"></div>
+      </div>
+      <aside class="panel info">
+        <div class="cards">
+          <div class="card"><div class="k">現在手番</div><div class="v" id="turn">-</div></div>
+          <div class="card"><div class="k">難易度</div><div class="v" id="difficultyLabel">中</div></div>
+          <div class="card"><div class="k">プレイヤー石数</div><div class="v" id="playerCount">2</div></div>
+          <div class="card"><div class="k">CPU石数</div><div class="v" id="cpuCount">2</div></div>
+        </div>
+        <div>
+          <div class="k">メッセージ</div>
+          <div id="message">「対局開始」を押してください。</div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const SIZE = 8;
+    const EMPTY = 0, BLACK = 1, WHITE = -1;
+    const DIRECTIONS = [
+      [-1, -1], [-1, 0], [-1, 1],
+      [0, -1],           [0, 1],
+      [1, -1],  [1, 0],  [1, 1]
+    ];
+    const WEIGHTS = [
+      [120, -20, 20, 5, 5, 20, -20, 120],
+      [-20, -40, -5, -5, -5, -5, -40, -20],
+      [20, -5, 15, 3, 3, 15, -5, 20],
+      [5, -5, 3, 3, 3, 3, -5, 5],
+      [5, -5, 3, 3, 3, 3, -5, 5],
+      [20, -5, 15, 3, 3, 15, -5, 20],
+      [-20, -40, -5, -5, -5, -5, -40, -20],
+      [120, -20, 20, 5, 5, 20, -20, 120]
+    ];
+    const DIFFICULTY_LABELS = ["最弱", "弱", "中", "強", "最強"];
+
+    const boardEl = document.getElementById("board");
+    const difficultyEl = document.getElementById("difficulty");
+    const orderEl = document.getElementById("order");
+    const startBtn = document.getElementById("startBtn");
+    const restartBtn = document.getElementById("restartBtn");
+    const turnEl = document.getElementById("turn");
+    const difficultyLabelEl = document.getElementById("difficultyLabel");
+    const playerCountEl = document.getElementById("playerCount");
+    const cpuCountEl = document.getElementById("cpuCount");
+    const messageEl = document.getElementById("message");
+
+    let board = [];
+    let currentPlayer = BLACK;
+    let playerColor = BLACK;
+    let cpuColor = WHITE;
+    let difficulty = 2;
+    let gameStarted = false;
+    let isGameOver = false;
+    let isCpuThinking = false;
+    let consecutivePasses = 0;
+    let messageTimer = null;
+
+    function createInitialBoard() {
+      const b = Array.from({ length: SIZE }, () => Array(SIZE).fill(EMPTY));
+      b[3][3] = WHITE;
+      b[3][4] = BLACK;
+      b[4][3] = BLACK;
+      b[4][4] = WHITE;
+      return b;
+    }
+
+    function inBounds(r, c) {
+      return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
+    }
+
+    function getFlips(b, row, col, color) {
+      if (!inBounds(row, col) || b[row][col] !== EMPTY) return [];
+      const flips = [];
+      for (const [dr, dc] of DIRECTIONS) {
+        const line = [];
+        let r = row + dr;
+        let c = col + dc;
+        while (inBounds(r, c) && b[r][c] === -color) {
+          line.push([r, c]);
+          r += dr;
+          c += dc;
+        }
+        if (line.length > 0 && inBounds(r, c) && b[r][c] === color) {
+          flips.push(...line);
+        }
+      }
+      return flips;
+    }
+
+    function getValidMoves(b, color) {
+      const moves = [];
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const flips = getFlips(b, r, c, color);
+          if (flips.length > 0) moves.push({ row: r, col: c, flips });
+        }
+      }
+      return moves;
+    }
+
+    function applyMove(b, move, color) {
+      b[move.row][move.col] = color;
+      for (const [r, c] of move.flips) b[r][c] = color;
+    }
+
+    function cloneBoard(b) {
+      return b.map(row => [...row]);
+    }
+
+    function countStones(b) {
+      let black = 0, white = 0;
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (b[r][c] === BLACK) black++;
+          else if (b[r][c] === WHITE) white++;
+        }
+      }
+      return { black, white };
+    }
+
+    function countPositional(b, color) {
+      let score = 0;
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (b[r][c] === color) score += WEIGHTS[r][c];
+          else if (b[r][c] === -color) score -= WEIGHTS[r][c];
+        }
+      }
+      return score;
+    }
+
+    function countSimpleStableDiscs(b, color) {
+      const corners = [[0, 0], [0, 7], [7, 0], [7, 7]];
+      let score = 0;
+      for (const [r, c] of corners) {
+        if (b[r][c] !== color) continue;
+        score += 1;
+        const dr = r === 0 ? 1 : -1;
+        const dc = c === 0 ? 1 : -1;
+        for (let i = 1; i < SIZE && b[r + i * dr][c] === color; i++) score += 0.25;
+        for (let i = 1; i < SIZE && b[r][c + i * dc] === color; i++) score += 0.25;
+      }
+      return score;
+    }
+
+    function evaluateBoard(b, color, level = 3) {
+      const { black, white } = countStones(b);
+      const discDiff = color === BLACK ? black - white : white - black;
+      const positional = countPositional(b, color);
+      const myMobility = getValidMoves(b, color).length;
+      const oppMobility = getValidMoves(b, -color).length;
+      const mobilityDiff = myMobility - oppMobility;
+
+      if (level <= 2) return discDiff + positional;
+
+      if (level === 3) {
+        return discDiff * 2 + positional + mobilityDiff * 7;
+      }
+
+      const stableDiff = countSimpleStableDiscs(b, color) - countSimpleStableDiscs(b, -color);
+      return discDiff * 2 + positional * 1.2 + mobilityDiff * 9 + stableDiff * 12;
+    }
+
+    function isTerminal(b, passCount) {
+      if (passCount >= 2) return true;
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          if (b[r][c] === EMPTY) return false;
+        }
+      }
+      return true;
+    }
+
+    function orderMoves(moves) {
+      return moves.sort((a, b) => {
+        const sa = WEIGHTS[a.row][a.col] + a.flips.length * 2;
+        const sb = WEIGHTS[b.row][b.col] + b.flips.length * 2;
+        return sb - sa;
+      });
+    }
+
+    function minimax(b, turnColor, rootColor, depth, alpha, beta, passCount, level) {
+      if (depth === 0 || isTerminal(b, passCount)) {
+        return { score: evaluateBoard(b, rootColor, level), move: null };
+      }
+
+      const moves = orderMoves(getValidMoves(b, turnColor));
+      if (moves.length === 0) {
+        return minimax(b, -turnColor, rootColor, depth - 1, alpha, beta, passCount + 1, level);
+      }
+
+      let bestMove = null;
+      if (turnColor === rootColor) {
+        let bestScore = -Infinity;
+        for (const move of moves) {
+          const next = cloneBoard(b);
+          applyMove(next, move, turnColor);
+          const score = minimax(next, -turnColor, rootColor, depth - 1, alpha, beta, 0, level).score;
+          if (score > bestScore) {
+            bestScore = score;
+            bestMove = move;
+          }
+          alpha = Math.max(alpha, bestScore);
+          if (beta <= alpha) break;
+        }
+        return { score: bestScore, move: bestMove };
+      }
+
+      let bestScore = Infinity;
+      for (const move of moves) {
+        const next = cloneBoard(b);
+        applyMove(next, move, turnColor);
+        const score = minimax(next, -turnColor, rootColor, depth - 1, alpha, beta, 0, level).score;
+        if (score < bestScore) {
+          bestScore = score;
+          bestMove = move;
+        }
+        beta = Math.min(beta, bestScore);
+        if (beta <= alpha) break;
+      }
+      return { score: bestScore, move: bestMove };
+    }
+
+    function pickMoveByDifficulty(moves) {
+      if (difficulty === 0) {
+        return moves[Math.floor(Math.random() * moves.length)];
+      }
+
+      if (difficulty === 1) {
+        const best = Math.max(...moves.map(m => m.flips.length));
+        const candidates = moves.filter(m => m.flips.length === best);
+        return candidates[Math.floor(Math.random() * candidates.length)];
+      }
+
+      if (difficulty === 2) {
+        let bestScore = -Infinity;
+        let best = [];
+        for (const move of moves) {
+          const score = move.flips.length * 2 + WEIGHTS[move.row][move.col];
+          if (score > bestScore) {
+            bestScore = score;
+            best = [move];
+          } else if (score === bestScore) {
+            best.push(move);
+          }
+        }
+        return best[Math.floor(Math.random() * best.length)];
+      }
+
+      if (difficulty === 3) {
+        const result = minimax(board, cpuColor, cpuColor, 3, -Infinity, Infinity, consecutivePasses, 3);
+        return result.move ?? moves[Math.floor(Math.random() * moves.length)];
+      }
+
+      const start = performance.now();
+      const timeLimitMs = 1800;
+      let bestMove = moves[0];
+      let depth = 3;
+      while (depth <= 7 && performance.now() - start < timeLimitMs) {
+        const result = minimax(board, cpuColor, cpuColor, depth, -Infinity, Infinity, consecutivePasses, 4);
+        if (result.move) bestMove = result.move;
+        depth++;
+      }
+      return bestMove;
+    }
+
+    function updateCountsAndLabels() {
+      const counts = countStones(board);
+      const playerCount = playerColor === BLACK ? counts.black : counts.white;
+      const enemyCount = cpuColor === BLACK ? counts.black : counts.white;
+      playerCountEl.textContent = String(playerCount);
+      cpuCountEl.textContent = String(enemyCount);
+      difficultyLabelEl.textContent = DIFFICULTY_LABELS[difficulty];
+
+      const turnText = isGameOver
+        ? "終局"
+        : (currentPlayer === playerColor ? "プレイヤー" : "CPU");
+      turnEl.textContent = turnText;
+    }
+
+    function setMessage(text, type = "", temporary = false) {
+      if (messageTimer) {
+        clearTimeout(messageTimer);
+        messageTimer = null;
+      }
+      messageEl.className = type ? `msg-${type}` : "";
+      messageEl.textContent = text;
+      if (temporary) {
+        messageTimer = setTimeout(() => {
+          if (!isGameOver) {
+            const normal = currentPlayer === playerColor ? "あなたの手番です。" : "CPUの手番です。";
+            setMessage(normal);
+          }
+        }, 1300);
+      }
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = "";
+      const validSet = new Set();
+      if (!isGameOver && gameStarted && currentPlayer === playerColor && !isCpuThinking) {
+        for (const m of getValidMoves(board, playerColor)) {
+          validSet.add(`${m.row},${m.col}`);
+        }
+      }
+
+      for (let r = 0; r < SIZE; r++) {
+        for (let c = 0; c < SIZE; c++) {
+          const cell = document.createElement("button");
+          cell.className = "cell";
+          cell.type = "button";
+          if (validSet.has(`${r},${c}`)) cell.classList.add("valid");
+          cell.addEventListener("click", () => handlePlayerMove(r, c));
+
+          if (board[r][c] !== EMPTY) {
+            const disc = document.createElement("span");
+            disc.className = `disc ${board[r][c] === BLACK ? "black" : "white"}`;
+            cell.appendChild(disc);
+          }
+          boardEl.appendChild(cell);
+        }
+      }
+      updateCountsAndLabels();
+    }
+
+    function handlePlayerMove(row, col) {
+      if (!gameStarted) {
+        setMessage("先に「対局開始」を押してください。", "warn", true);
+        return;
+      }
+      if (isGameOver) return;
+      if (isCpuThinking || currentPlayer !== playerColor) {
+        setMessage("今はプレイヤーの操作タイミングではありません。", "warn", true);
+        return;
+      }
+
+      const flips = getFlips(board, row, col, playerColor);
+      if (flips.length === 0) {
+        setMessage("そこには置けません。", "danger", true);
+        return;
+      }
+
+      applyMove(board, { row, col, flips }, playerColor);
+      currentPlayer = -currentPlayer;
+      consecutivePasses = 0;
+      renderBoard();
+      setTimeout(runTurnLoop, 80);
+    }
+
+    function finishGame() {
+      isGameOver = true;
+      const counts = countStones(board);
+      const playerCount = playerColor === BLACK ? counts.black : counts.white;
+      const enemyCount = cpuColor === BLACK ? counts.black : counts.white;
+      if (playerCount > enemyCount) {
+        setMessage(`対局終了！ あなたの勝ち（${playerCount} - ${enemyCount}）`, "ok");
+      } else if (playerCount < enemyCount) {
+        setMessage(`対局終了！ あなたの負け（${playerCount} - ${enemyCount}）`, "danger");
+      } else {
+        setMessage(`対局終了！ 引き分け（${playerCount} - ${enemyCount}）`, "warn");
+      }
+      renderBoard();
+    }
+
+    function runTurnLoop() {
+      if (isGameOver || !gameStarted) return;
+
+      const legal = getValidMoves(board, currentPlayer);
+      if (legal.length === 0) {
+        consecutivePasses++;
+        const who = currentPlayer === playerColor ? "プレイヤー" : "CPU";
+        setMessage(`${who}は置ける場所がないためパスします。`, "warn", true);
+
+        if (isTerminal(board, consecutivePasses)) {
+          finishGame();
+          return;
+        }
+
+        currentPlayer = -currentPlayer;
+        renderBoard();
+        setTimeout(runTurnLoop, 500);
+        return;
+      }
+
+      consecutivePasses = 0;
+      renderBoard();
+
+      if (currentPlayer === cpuColor) {
+        isCpuThinking = true;
+        setMessage("CPU思考中...", "ok");
+        setTimeout(() => {
+          if (isGameOver) return;
+          const cpuMoves = getValidMoves(board, cpuColor);
+          if (cpuMoves.length === 0) {
+            isCpuThinking = false;
+            runTurnLoop();
+            return;
+          }
+          const move = pickMoveByDifficulty(cpuMoves);
+          applyMove(board, move, cpuColor);
+          currentPlayer = -currentPlayer;
+          isCpuThinking = false;
+          renderBoard();
+          setTimeout(runTurnLoop, 80);
+        }, 120);
+      } else {
+        setMessage("あなたの手番です。");
+      }
+    }
+
+    function beginGame() {
+      difficulty = Number(difficultyEl.value);
+      playerColor = orderEl.value === "first" ? BLACK : WHITE;
+      cpuColor = -playerColor;
+      board = createInitialBoard();
+      currentPlayer = BLACK;
+      gameStarted = true;
+      isGameOver = false;
+      isCpuThinking = false;
+      consecutivePasses = 0;
+      renderBoard();
+      setMessage("対局を開始しました。", "ok", true);
+      setTimeout(runTurnLoop, 120);
+    }
+
+    startBtn.addEventListener("click", beginGame);
+    restartBtn.addEventListener("click", beginGame);
+
+    board = createInitialBoard();
+    renderBoard();
+  </script>
+</body>
+</html>
